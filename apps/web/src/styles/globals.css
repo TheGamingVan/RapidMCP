@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --bg: #f6efe2;
+  --ink: #162226;
+  --panel: #ffffff;
+  --panel-strong: #e8dbbf;
+  --accent: #f97316;
+  --mint: #0f766e;
+  --rose: #be123c;
+  --sky: #0284c7;
+  --shadow: rgba(10, 15, 20, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: radial-gradient(1200px 800px at 10% 10%, #f1c38a 0%, transparent 60%),
+    radial-gradient(900px 700px at 90% 20%, #b0e3d6 0%, transparent 55%),
+    linear-gradient(180deg, #f7f0e5 0%, #f1e2c7 100%);
+  min-height: 100vh;
+}
+
+input, textarea, button, select {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+code {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1bfa3;
+  border-radius: 999px;
+}
