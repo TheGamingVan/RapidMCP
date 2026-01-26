@@ -1,5 +1,5 @@
 ﻿import os
-import json
+import yaml
 import asyncio
 import time
 from typing import Any, Dict, List, Tuple, Callable
@@ -45,12 +45,12 @@ async def sleep_progress(seconds: int, ctx: Any = None) -> str:
 tool_names.append("sleep_progress")
 
 def load_openapi() -> Tuple[bool, List[str]]:
-    path = os.path.join(os.path.dirname(__file__), "openapi.json")
+    path = os.path.join(os.path.dirname(__file__), "openapi.yml")
     if not os.path.exists(path):
         return False, []
     try:
         with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
+            data = yaml.safe_load(f)
     except Exception:
         return False, []
     if not isinstance(data, dict) or "paths" not in data:
@@ -103,7 +103,7 @@ def load_openapi() -> Tuple[bool, List[str]]:
 
 try:
     if hasattr(mcp, "from_openapi"):
-        path = os.path.join(os.path.dirname(__file__), "openapi.json")
+        path = os.path.join(os.path.dirname(__file__), "openapi.yml")
         api_base = os.getenv("API_BASE_URL")
         if api_base and os.path.exists(path):
             try:

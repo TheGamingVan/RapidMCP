@@ -74,8 +74,38 @@
 2026-01-25 22:21:47,780 WARNING host-service.fs-mcp - npx launch failed, retrying with npx.cmd
 2026-01-25 22:21:47,786 INFO host-service - Startup complete
 2026-01-25 22:21:49,324 WARNING host-service.fs-mcp - fs MCP stderr: Secure MCP Filesystem Server running on stdio
-2026-01-25 22:29:24,186 INFO host-service - HOST_PORT=8080 MCP_API_URL=http://localhost:8000/mcp FS_MCP_ENABLED=True FILE_STORE_DIR=D:\Projects\RapidMCP\.\data
-2026-01-25 22:29:24,207 INFO host-service.fs-mcp - Starting fs MCP: npx -y @modelcontextprotocol/server-filesystem D:\Projects\RapidMCP\data D:\Projects\RapidMCP\data
-2026-01-25 22:29:24,210 WARNING host-service.fs-mcp - npx launch failed, retrying with npx.cmd
-2026-01-25 22:29:24,218 INFO host-service - Startup complete
-2026-01-25 22:29:25,553 WARNING host-service.fs-mcp - fs MCP stderr: Secure MCP Filesystem Server running on stdio
+2026-01-26 14:37:35,556 INFO host-service - HOST_PORT=8080 MCP_API_URL=http://localhost:8000/mcp FS_MCP_ENABLED=True FILE_STORE_DIR=D:\Projects\RapidMCP\.\data
+2026-01-26 14:37:35,591 INFO host-service.fs-mcp - Starting fs MCP: npx -y @modelcontextprotocol/server-filesystem D:\Projects\RapidMCP\data D:\Projects\RapidMCP\data
+2026-01-26 14:37:35,594 WARNING host-service.fs-mcp - npx launch failed, retrying with npx.cmd
+2026-01-26 14:37:35,601 INFO host-service - Startup complete
+2026-01-26 14:37:37,144 WARNING host-service.fs-mcp - fs MCP stderr: Secure MCP Filesystem Server running on stdio
+2026-01-26 15:04:39,955 INFO host-service - HOST_PORT=8080 MCP_API_URL=http://localhost:8000/mcp FS_MCP_ENABLED=True FILE_STORE_DIR=D:\Projects\RapidMCP\.\data
+2026-01-26 15:04:39,990 INFO host-service.fs-mcp - Starting fs MCP: npx -y @modelcontextprotocol/server-filesystem D:\Projects\RapidMCP\data D:\Projects\RapidMCP\data
+2026-01-26 15:04:39,994 WARNING host-service.fs-mcp - npx launch failed, retrying with npx.cmd
+2026-01-26 15:04:40,002 INFO host-service - Startup complete
+2026-01-26 15:04:42,378 WARNING host-service.fs-mcp - fs MCP stderr: Secure MCP Filesystem Server running on stdio
+2026-01-26 16:22:26,127 INFO host-service - HOST_PORT=8080 MCP_API_URL=http://localhost:8000/mcp FS_MCP_ENABLED=True FILE_STORE_DIR=D:\Projects\RapidMCP\.\data
+2026-01-26 16:22:26,145 INFO host-service.fs-mcp - Starting fs MCP: npx -y @modelcontextprotocol/server-filesystem D:\Projects\RapidMCP\data D:\Projects\RapidMCP\data
+2026-01-26 16:22:26,148 WARNING host-service.fs-mcp - npx launch failed, retrying with npx.cmd
+2026-01-26 16:22:26,153 INFO host-service - Startup complete
+2026-01-26 16:22:27,454 WARNING host-service.fs-mcp - fs MCP stderr: Secure MCP Filesystem Server running on stdio
+2026-01-26 16:30:16,138 INFO host-service - HOST_PORT=8080 MCP_API_URL=http://localhost:8000/mcp FS_MCP_ENABLED=True FILE_STORE_DIR=D:\Projects\RapidMCP\.\data
+2026-01-26 16:30:16,160 INFO host-service.fs-mcp - Starting fs MCP: npx -y @modelcontextprotocol/server-filesystem D:\Projects\RapidMCP\data D:\Projects\RapidMCP\data
+2026-01-26 16:30:16,163 WARNING host-service.fs-mcp - npx launch failed, retrying with npx.cmd
+2026-01-26 16:30:16,169 INFO host-service - Startup complete
+2026-01-26 16:30:17,540 WARNING host-service.fs-mcp - fs MCP stderr: Secure MCP Filesystem Server running on stdio
+2026-01-26 16:39:49,801 INFO host-service - HOST_PORT=8080 MCP_API_URL=http://localhost:8000/mcp FS_MCP_ENABLED=True FILE_STORE_DIR=D:\Projects\RapidMCP\.\data
+2026-01-26 16:39:49,822 INFO host-service.fs-mcp - Starting fs MCP: npx -y @modelcontextprotocol/server-filesystem D:\Projects\RapidMCP\data D:\Projects\RapidMCP\data
+2026-01-26 16:39:49,825 WARNING host-service.fs-mcp - npx launch failed, retrying with npx.cmd
+2026-01-26 16:39:49,830 INFO host-service - Startup complete
+2026-01-26 16:39:52,017 WARNING host-service.fs-mcp - fs MCP stderr: Secure MCP Filesystem Server running on stdio
+2026-01-26 16:56:57,304 INFO host-service - HOST_PORT=8080 MCP_API_URL=http://localhost:8000/mcp/ FS_MCP_ENABLED=True FILE_STORE_DIR=D:\Projects\RapidMCP\.\data
+2026-01-26 16:56:57,327 INFO host-service.fs-mcp - Starting fs MCP: npx -y @modelcontextprotocol/server-filesystem D:\Projects\RapidMCP\data D:\Projects\RapidMCP\data
+2026-01-26 16:56:57,330 WARNING host-service.fs-mcp - npx launch failed, retrying with npx.cmd
+2026-01-26 16:56:57,336 INFO host-service - Startup complete
+2026-01-26 16:57:17,078 WARNING host-service.fs-mcp - fs MCP stderr: Secure MCP Filesystem Server running on stdio
+2026-01-26 17:05:42,101 INFO host-service - HOST_PORT=8080 MCP_API_URL=http://localhost:8000/mcp/ FS_MCP_ENABLED=True FILE_STORE_DIR=D:\Projects\RapidMCP\.\data
+2026-01-26 17:05:42,118 INFO host-service.fs-mcp - Starting fs MCP: npx -y @modelcontextprotocol/server-filesystem D:\Projects\RapidMCP\data D:\Projects\RapidMCP\data
+2026-01-26 17:05:42,121 WARNING host-service.fs-mcp - npx launch failed, retrying with npx.cmd
+2026-01-26 17:05:42,126 INFO host-service - Startup complete
+2026-01-26 17:05:44,245 WARNING host-service.fs-mcp - fs MCP stderr: Secure MCP Filesystem Server running on stdio
