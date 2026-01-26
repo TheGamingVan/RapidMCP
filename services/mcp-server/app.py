@@ -8,7 +8,8 @@ import httpx
 from fastmcp import FastMCP
 
 mcp = FastMCP("mcp-server")
-mcp_app = mcp.http_app(path="/")
+# Use JSON responses + stateless HTTP so simple HTTP clients can talk to MCP.
+mcp_app = mcp.http_app(path="/", json_response=True, stateless_http=True)
 app = FastAPI(lifespan=mcp_app.lifespan)
 
 tool_names: List[str] = []
@@ -16,7 +17,7 @@ openapi_loaded = False
 
 @mcp.tool()
 async def ping() -> str:
-    return "pong"
+    return "PONG"
 
 tool_names.append("ping")
 

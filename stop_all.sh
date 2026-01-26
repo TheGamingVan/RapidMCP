@@ -32,7 +32,9 @@ stop_by_port() {
 stop_by_pidfile "web"
 stop_by_pidfile "host-service"
 stop_by_pidfile "mcp-server"
+stop_by_pidfile "dummy-api"
 
 stop_by_port 3000 "web"
 stop_by_port 8080 "host-service"
 stop_by_port 8000 "mcp-server"
+stop_by_port 9000 "dummy-api"

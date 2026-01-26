@@ -73,6 +73,9 @@ Start-TrackedProcess -Name "mcp-server" -FilePath $psExe -ArgumentList @("-NoExi
 $hostScript = Join-Path $root "services\host-service\run_local.ps1"
 Start-TrackedProcess -Name "host-service" -FilePath $psExe -ArgumentList @("-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $hostScript) -WorkingDirectory (Split-Path $hostScript)
 
+$dummyScript = Join-Path $root "services\dummy-api\run_local.ps1"
+Start-TrackedProcess -Name "dummy-api" -FilePath $psExe -ArgumentList @("-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $dummyScript) -WorkingDirectory (Split-Path $dummyScript)
+
 $webDir = Join-Path $root "apps\web"
 $webCommand = "cd `"$webDir`"; if (!(Test-Path node_modules)) { npm install }; npm run dev"
 Start-TrackedProcess -Name "web" -FilePath $psExe -ArgumentList @("-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", $webCommand) -WorkingDirectory $webDir

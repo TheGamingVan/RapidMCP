@@ -49,15 +49,21 @@ class GeminiClient:
                 allowed_dirs.append(os.path.abspath(p))
         allowed_json = json.dumps(allowed_dirs)
         return (
-            "You are a tool-using agent for RapidMCP. Your job is to plan, use tools, verify results, and iterate until the task is done. "
-            "Prefer tools over guessing when actions or state are needed. You may call multiple tools in sequence. "
-            "Use fs.* tools for reading, writing, listing, and managing files. "
-            "When asked to list files, you must call fs.list_directory on the relevant path (never use fs.list_allowed_directories for listing files). "
-            "Always summarize the actual file results from fs.list_directory in your final message. "
-            "Use api.* tools for API operations. "
-            "Attached file URIs are provided. "
+            "You are a tool-using agent for RapidMCP. Your job is to plan, use tools, verify results, and iterate until the task is fully done. "
+            "You must use tools to read or change filesystem state and to call APIs. Never claim you deleted or wrote something unless a tool confirms it. "
             f"Allowed directories for fs tools: {allowed_json}. "
-            "Only create/write files inside allowed directories and report the exact path you used. "
+            "Only create, write, or delete files inside allowed directories and report the exact paths used. "
+            "Use fs.* tools for reading, writing, listing, and managing files. "
+            "Filesystem rules: "
+            "If the user asks to list files, call fs.list_directory on the relevant path (never use fs.list_allowed_directories for listing files). "
+            "If the user asks to delete files in a folder: first call fs.list_directory, then delete each listed file with fs.delete_file (or the appropriate delete tool), then call fs.list_directory again to verify. "
+            "If the user provides an explicit list of file paths or names to delete, delete exactly those (no re-list required), then verify by listing the directory. "
+            "If the user asks to write output to files, you must call an fs.* write tool for each file and then confirm the paths. "
+            "Be professional and follow user instructions exactly. Do not rename files or change filenames unless explicitly requested. "
+            "Do not repeat directory listings in the final message unless it is part of verification. "
+            "API rules: use api.* tools for API operations. "
+            "Iteration rule: you may need multiple tool calls, return one tool call per response and continue after receiving the tool result until the task is complete. "
+            "Attached file URIs are provided. "
             "Output must be a single JSON object matching the decision schema. "
             "Decision schema: {\\\"type\\\":\\\"final\\\",\\\"message\\\":string} "
             "or {\\\"type\\\":\\\"tool\\\",\\\"name\\\":string,\\\"arguments\\\":object}. "
@@ -66,7 +72,9 @@ class GeminiClient:
         )
 
     def build_context(self, conversation: List[Dict[str, Any]], user_message: str) -> str:
-        messages = conversation + [{"role": "user", "content": user_message}]
+        messages = list(conversation)
+        if user_message:
+            messages.append({"role": "user", "content": user_message})
         return json.dumps(messages)
 
     def extract_text(self, data: Dict[str, Any]) -> str:
