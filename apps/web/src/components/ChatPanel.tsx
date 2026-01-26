@@ -4,16 +4,18 @@ import { ChatMessage } from "@/lib/types"
 export default function ChatPanel({
   messages,
   draftAssistant,
-  onSend
+  onSend,
+  isProcessing
 }: {
   messages: ChatMessage[]
   draftAssistant: string
+  isProcessing: boolean
   onSend: (text: string) => void
 }) {
   const [input, setInput] = useState("")
 
   const handleSubmit = () => {
-    if (!input.trim()) return
+    if (!input.trim() || isProcessing) return
     onSend(input)
     setInput("")
   }
@@ -44,14 +46,19 @@ export default function ChatPanel({
       </div>
       <div className="mt-4 flex flex-col gap-2">
         <textarea
-          className="w-full rounded-xl border border-black/10 px-3 py-2 text-sm bg-white min-h-[90px]"
-          placeholder="Ask something or call a tool"
+          className="w-full rounded-xl border border-black/10 px-3 py-2 text-sm bg-white min-h-[90px] disabled:opacity-60"
+          placeholder={isProcessing ? "Processing request..." : "Ask something or call a tool"}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
+          disabled={isProcessing}
         />
-        <button className="rounded-xl bg-[var(--accent)] text-white px-4 py-2 text-sm" onClick={handleSubmit}>
-          Send
+        <button
+          className="rounded-xl bg-[var(--accent)] text-white px-4 py-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+          onClick={handleSubmit}
+          disabled={isProcessing}
+        >
+          {isProcessing ? "Processing..." : "Send"}
         </button>
       </div>
     </div>

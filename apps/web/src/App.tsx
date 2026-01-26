@@ -27,6 +27,7 @@ export default function App() {
   const [draftAssistant, setDraftAssistant] = useState("")
   const [toolEvents, setToolEvents] = useState<ToolEvent[]>([])
   const [connected, setConnected] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
   const [sessionId, setSessionId] = useState("")
   const [wsNonce, setWsNonce] = useState(0)
   const wsRef = useRef<WsClient | null>(null)
@@ -44,7 +45,10 @@ export default function App() {
         setConnected(true)
         client.send({ type: "hello", sessionId })
       },
-      onClose: () => setConnected(false),
+      onClose: () => {
+        setConnected(false)
+        setIsProcessing(false)
+      },
       onMessage: (data) => handleWsMessage(data)
     })
     wsRef.current = client
@@ -109,6 +113,7 @@ export default function App() {
       const content = data.content || ""
       setDraftAssistant("")
       setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "assistant", content }])
+      setIsProcessing(false)
       return
     }
     if (data.type === "tool_start") {
@@ -135,10 +140,11 @@ export default function App() {
   }
 
   const handleSend = (text: string) => {
-    if (!text.trim()) return
+    if (!text.trim() || isProcessing) return
     const fileUris = files.filter((f) => selectedFiles[f.id]).map((f) => f.uri)
     const msg: ChatMessage = { id: crypto.randomUUID(), role: "user", content: text }
     setMessages((prev) => [...prev, msg])
+    setIsProcessing(true)
     wsRef.current?.send({ type: "user_message", sessionId, content: text, fileUris })
   }
 
@@ -176,7 +182,7 @@ export default function App() {
           <Sidebar tools={tools} />
           <div className="space-y-6">
             <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6">
-              <ChatPanel messages={messages} draftAssistant={draftAssistant} onSend={handleSend} />
+              <ChatPanel messages={messages} draftAssistant={draftAssistant} onSend={handleSend} isProcessing={isProcessing} />
               <ToolActivity events={toolEvents} />
             </div>
             <FilesPanel

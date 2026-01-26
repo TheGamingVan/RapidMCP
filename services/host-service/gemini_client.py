@@ -9,6 +9,7 @@ class GeminiClient:
     def __init__(self) -> None:
         self.api_key = os.getenv("GEMINI_API_KEY", "")
         self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+        self.context_window = int(os.getenv("AGENT_CONTEXT_WINDOW_SIZE", "6000"))
 
     def is_configured(self) -> bool:
         return bool(self.api_key)
@@ -67,6 +68,7 @@ class GeminiClient:
             "Output must be a single JSON object matching the decision schema. "
             "Decision schema: {\\\"type\\\":\\\"final\\\",\\\"message\\\":string} "
             "or {\\\"type\\\":\\\"tool\\\",\\\"name\\\":string,\\\"arguments\\\":object}. "
+            f"Context window size (characters): {self.context_window}. The full window is provided; decide what is relevant. "
             f"Available tools: {tools_json}. "
             f"File URIs: {file_json}."
         )
@@ -75,6 +77,13 @@ class GeminiClient:
         messages = list(conversation)
         if user_message:
             messages.append({"role": "user", "content": user_message})
+        if self.context_window <= 0:
+            return json.dumps(messages)
+        while len(messages) > 1:
+            serialized = json.dumps(messages)
+            if len(serialized) <= self.context_window:
+                return serialized
+            messages.pop(0)
         return json.dumps(messages)
 
     def extract_text(self, data: Dict[str, Any]) -> str:

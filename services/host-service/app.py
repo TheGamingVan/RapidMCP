@@ -58,6 +58,8 @@ stdio_client = StdioMcpClient(file_store.base_dir)
 cached_tools: List[Dict[str, Any]] = []
 last_tools_refresh = 0.0
 last_fs_tool_names: set[str] = set()
+session_conversations: Dict[str, List[Dict[str, Any]]] = {}
+session_state: Dict[str, Dict[str, Any]] = {}
 
 def compute_allowed_dirs() -> List[str]:
     dirs = [os.path.abspath(FILE_STORE_DIR)]
@@ -192,24 +194,30 @@ async def ws_endpoint(ws: WebSocket) -> None:
             msg_type = data.get("type")
             if msg_type == "hello":
                 session_id = data.get("sessionId")
+                if session_id and session_id not in session_conversations:
+                    session_conversations[session_id] = []
+                    session_state[session_id] = {}
                 status_payload = await resolve_status()
                 await ws.send_text(json.dumps({"type": "status", **status_payload}))
             elif msg_type == "user_message":
                 session_id = data.get("sessionId")
                 content = data.get("content", "")
                 file_uris = data.get("fileUris", [])
-                await handle_user_message(ws, content, file_uris)
+                await handle_user_message(ws, session_id, content, file_uris)
     except WebSocketDisconnect:
         return
     except Exception:
         logger.exception("WebSocket error session=%s", session_id)
 
-async def handle_user_message(ws: WebSocket, content: str, file_uris: List[str]) -> None:
+async def handle_user_message(ws: WebSocket, session_id: Optional[str], content: str, file_uris: List[str]) -> None:
     tools = await get_tools()
     status_payload = await resolve_status()
     await ws.send_text(json.dumps({"type": "status", **status_payload}))
     tool_names = {t.get("name", "") for t in tools}
     content_text = content or ""
+    api_tools = [t for t in tools if t.get("source") == "api"]
+    memory = session_conversations.get(session_id, []) if session_id else []
+    state = session_state.get(session_id, {}) if session_id else {}
 
     async def run_tool_ws(name: str, arguments: Dict[str, Any]) -> Any:
         call_id = str(uuid.uuid4())
@@ -306,6 +314,80 @@ async def handle_user_message(ws: WebSocket, content: str, file_uris: List[str])
 
     can_delete = delete_all and "fs.list_directory" in tool_names and "fs.delete_file" in tool_names
     can_ping = ping_count is not None and ping_count > 0 and "api.ping" in tool_names and "fs.write_file" in tool_names
+    wants_all_api = bool(re.search(r"\b(all|every)\b.*\bapi\b.*\b(endpoints|tools)\b", content_text, re.IGNORECASE))
+    wants_health = bool(re.search(r"\bhealth\b", content_text, re.IGNORECASE))
+    wants_stats = bool(re.search(r"\bstats?\b", content_text, re.IGNORECASE))
+    wants_widgets = bool(re.search(r"\bwidget\b", content_text, re.IGNORECASE))
+    wants_repeat = bool(re.search(r"\b(same|as before|again|do it as before|do everything again)\b", content_text, re.IGNORECASE))
+    wants_also = bool(re.search(r"\b(now\s+also|also)\b", content_text, re.IGNORECASE))
+    wants_text_files = bool(
+        re.search(r"\b(text\s+files?|files?)\b", content_text, re.IGNORECASE)
+        or re.search(r"\.txt\b", content_text, re.IGNORECASE)
+        or re.search(r"\bput\b.*\bfiles?\b", content_text, re.IGNORECASE)
+    )
+    if not wants_text_files and (wants_repeat or wants_also) and state.get("last_selected_tools"):
+        wants_text_files = True
+    can_write_files = "fs.write_file" in tool_names
+    widget_tool_names = {"api.list_widgets", "api.get_widget", "api.search_widgets"}
+
+    def summarize_result(result: Any) -> str:
+        if isinstance(result, dict) and "status_code" in result and "body" in result:
+            status = result.get("status_code")
+            body = result.get("body")
+            parsed = None
+            if isinstance(body, str):
+                try:
+                    parsed = json.loads(body)
+                except Exception:
+                    parsed = None
+            if isinstance(parsed, dict):
+                keys = ", ".join(sorted(parsed.keys()))
+                items = parsed.get("items")
+                count = len(items) if isinstance(items, list) else None
+                parts = [f"Status {status}. JSON object with keys: {keys}."]
+                if count is not None:
+                    parts.append(f"Items count: {count}.")
+                return " ".join(parts)
+            if isinstance(parsed, list):
+                return f"Status {status}. JSON array with {len(parsed)} item(s)."
+            if isinstance(body, str) and body:
+                snippet = body.strip().replace("\n", " ")
+                snippet = snippet[:200] + ("…" if len(snippet) > 200 else "")
+                return f"Status {status}. Body: {snippet}"
+            return f"Status {status}. Empty body."
+        if isinstance(result, dict):
+            keys = ", ".join(sorted(result.keys()))
+            return f"JSON object with keys: {keys}."
+        if isinstance(result, list):
+            return f"JSON array with {len(result)} item(s)."
+        return str(result)
+
+    def default_args_for_tool(tool: Dict[str, Any]) -> Dict[str, Any]:
+        name = tool.get("name", "")
+        short = name[len("api."):] if name.startswith("api.") else name
+        if short == "get_widget":
+            return {"widget_id": "w1"}
+        if short == "search_widgets":
+            return {"q": "alpha"}
+        if short == "list_widgets":
+            return {"limit": 5}
+        schema = tool.get("inputSchema") or {}
+        props = schema.get("properties") if isinstance(schema, dict) else None
+        required = schema.get("required") if isinstance(schema, dict) else None
+        args: Dict[str, Any] = {}
+        if isinstance(required, list) and isinstance(props, dict):
+            for key in required:
+                prop = props.get(key, {}) if isinstance(props, dict) else {}
+                ptype = prop.get("type") if isinstance(prop, dict) else None
+                if ptype == "integer":
+                    args[key] = 1
+                elif ptype == "number":
+                    args[key] = 1
+                elif ptype == "boolean":
+                    args[key] = False
+                else:
+                    args[key] = "test"
+        return args
 
     # Deterministic execution for delete + batch ping requests.
     if can_delete or can_ping:
@@ -345,17 +427,83 @@ async def handle_user_message(ws: WebSocket, content: str, file_uris: List[str])
             summary_parts.append(f"Deleted {len(deleted_paths)} file(s) from {target_dir}.")
         if can_ping:
             summary_parts.append(f"Wrote {len(written_paths)} ping response(s) to: " + ", ".join(written_paths))
-        await emit_assistant_message(ws, " ".join(summary_parts) if summary_parts else "Done.")
+        summary = " ".join(summary_parts) if summary_parts else "Done."
+        await emit_assistant_message(ws, summary)
+        if session_id is not None:
+            session_conversations[session_id] = memory + [
+                {"role": "user", "content": content_text},
+                {"role": "assistant", "content": summary},
+            ]
         return
 
-    conversation: List[Dict[str, Any]] = []
+    # Deterministic execution for all API tools or specific health/stats to files.
+    if can_write_files and api_tools and (wants_all_api or ((wants_health or wants_stats or wants_widgets or wants_repeat or wants_also) and wants_text_files)):
+        target_dir = default_fs_dir()
+        explicit_dir = extract_target_dir(content_text)
+        if explicit_dir and os.path.isdir(explicit_dir) and is_allowed_path(explicit_dir):
+            target_dir = explicit_dir
+        selected_tools: List[Dict[str, Any]] = []
+        if wants_all_api:
+            selected_tools = api_tools
+        else:
+            if wants_repeat and state.get("last_selected_tools"):
+                selected_names = set(state.get("last_selected_tools", []))
+                selected_tools.extend([t for t in api_tools if t.get("name") in selected_names])
+            if wants_health:
+                selected_tools.extend([t for t in api_tools if t.get("name") == "api.health_check"])
+            if wants_stats:
+                selected_tools.extend([t for t in api_tools if t.get("name") == "api.get_stats"])
+            if wants_widgets:
+                selected_tools.extend([t for t in api_tools if t.get("name") in widget_tool_names])
+            if wants_also and wants_widgets and state.get("last_selected_tools"):
+                selected_names = set(state.get("last_selected_tools", []))
+                for t in api_tools:
+                    if t.get("name") in selected_names and t not in selected_tools:
+                        selected_tools.append(t)
+        # Deduplicate while preserving order.
+        seen_names: set[str] = set()
+        deduped: List[Dict[str, Any]] = []
+        for t in selected_tools:
+            name = t.get("name", "")
+            if name and name not in seen_names:
+                seen_names.add(name)
+                deduped.append(t)
+        selected_tools = deduped
+        written_paths: List[str] = []
+        for tool in selected_tools:
+            tool_name = tool.get("name", "")
+            if not tool_name:
+                continue
+            args = default_args_for_tool(tool)
+            result = await run_tool_ws(tool_name, args)
+            content_value = summarize_result(result)
+            base = tool_name.replace("api.", "")
+            file_path = os.path.join(target_dir, f"{base}.txt")
+            await run_tool_ws("fs.write_file", {"path": file_path, "content": content_value})
+            written_paths.append(file_path)
+        summary = "Wrote API outputs to: " + ", ".join(written_paths) if written_paths else "No API tools matched."
+        await emit_assistant_message(ws, summary)
+        if session_id is not None:
+            state = session_state.get(session_id, {})
+            state["last_selected_tools"] = [t.get("name") for t in selected_tools if t.get("name")]
+            state["last_target_dir"] = target_dir
+            session_state[session_id] = state
+            session_conversations[session_id] = memory + [
+                {"role": "user", "content": content_text},
+                {"role": "assistant", "content": summary},
+            ]
+        return
+
+    conversation: List[Dict[str, Any]] = list(memory)
+    if content_text:
+        conversation.append({"role": "user", "content": content_text})
     used_fs_write = False
-    needs_file_write = bool(re.search(r"\b(save|write|store)\b", content_text, re.IGNORECASE)) and bool(
+    needs_file_write = bool(re.search(r"\b(save|write|store|put)\b", content_text, re.IGNORECASE)) and bool(
         re.search(r"\bfile\b|\\.txt\\b|\\.json\\b|\\.md\\b", content_text, re.IGNORECASE)
     )
     max_iters = 12
     for i in range(max_iters):
-        decision = await gemini_client.decide(conversation, tools, content, file_uris)
+        decision = await gemini_client.decide(conversation, tools, "", file_uris)
         if decision.get("type") == "tool":
             name = decision.get("name", "")
             arguments = decision.get("arguments", {})
@@ -383,7 +531,6 @@ async def handle_user_message(ws: WebSocket, content: str, file_uris: List[str])
                     "role": "user",
                     "content": "You still need to write the result into a file using fs.* tools. Continue.",
                 })
-                content = ""
                 continue
             # Last attempt: respond with a clear failure instead of hanging.
             await emit_assistant_message(
@@ -391,8 +538,14 @@ async def handle_user_message(ws: WebSocket, content: str, file_uris: List[str])
                 "I couldn't complete the file write within the tool budget. "
                 "Please try again or specify the exact filename and directory.",
             )
+            if session_id is not None:
+                session_conversations[session_id] = conversation + [
+                    {"role": "assistant", "content": "I couldn't complete the file write within the tool budget. Please try again or specify the exact filename and directory."},
+                ]
             return
         await emit_assistant_message(ws, message)
+        if session_id is not None:
+            session_conversations[session_id] = conversation + [{"role": "assistant", "content": message}]
         return
 
     # Fallback: if we exhaust iterations, return a safe message.
@@ -400,6 +553,10 @@ async def handle_user_message(ws: WebSocket, content: str, file_uris: List[str])
         ws,
         "I couldn't finish the task within the allowed steps. Please try again.",
     )
+    if session_id is not None:
+        session_conversations[session_id] = conversation + [
+            {"role": "assistant", "content": "I couldn't finish the task within the allowed steps. Please try again."},
+        ]
 
 async def emit_assistant_message(ws: WebSocket, message: str) -> None:
     chunk_size = 40
