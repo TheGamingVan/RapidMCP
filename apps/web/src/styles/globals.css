@@ -4,15 +4,17 @@
 
 :root {
   color-scheme: light;
-  --bg: #f6efe2;
-  --ink: #162226;
+  --bg: #f5f7fb;
+  --ink: #1f2937;
   --panel: #ffffff;
-  --panel-strong: #e8dbbf;
-  --accent: #f97316;
+  --panel-muted: #f8fafc;
+  --border: #e5e7eb;
+  --accent: #22c55e;
+  --accent-strong: #16a34a;
   --mint: #0f766e;
   --rose: #be123c;
   --sky: #0284c7;
-  --shadow: rgba(10, 15, 20, 0.12);
+  --shadow: rgba(15, 23, 42, 0.08);
 }
 
 * {
@@ -21,16 +23,19 @@
 
 body {
   margin: 0;
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
   color: var(--ink);
-  background: radial-gradient(1200px 800px at 10% 10%, #f1c38a 0%, transparent 60%),
-    radial-gradient(900px 700px at 90% 20%, #b0e3d6 0%, transparent 55%),
-    linear-gradient(180deg, #f7f0e5 0%, #f1e2c7 100%);
+  background: var(--bg);
   min-height: 100vh;
+  overflow: hidden;
+}
+
+html, body, #root {
+  height: 100%;
 }
 
 input, textarea, button, select {
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
 }
 
 code {
@@ -42,6 +47,27 @@ code {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d1bfa3;
+  background: #d1d5db;
   border-radius: 999px;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-2xl border border-slate-200 bg-white shadow-[0_6px_24px_rgba(15,23,42,0.06)];
+  }
+  .panel-muted {
+    @apply rounded-2xl border border-slate-200 bg-slate-50;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:bg-slate-50;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--accent-strong)];
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700;
+  }
+  .input {
+    @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-200;
+  }
 }

@@ -60,6 +60,8 @@ class GeminiClient:
             "If the user asks to delete files in a folder: first call fs.list_directory, then delete each listed file with fs.delete_file (or the appropriate delete tool), then call fs.list_directory again to verify. "
             "If the user provides an explicit list of file paths or names to delete, delete exactly those (no re-list required), then verify by listing the directory. "
             "If the user asks to write output to files, you must call an fs.* write tool for each file and then confirm the paths. "
+            "When asked to write API output to a file, call the relevant api.* tool first, then call fs.write_file with the full tool output (not a summary). "
+            "Use the exact filename the user provided; if none is provided, ask a clarifying question before writing. "
             "Be professional and follow user instructions exactly. Do not rename files or change filenames unless explicitly requested. "
             "Do not repeat directory listings in the final message unless it is part of verification. "
             "API rules: use api.* tools for API operations. "

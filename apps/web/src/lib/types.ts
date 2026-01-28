@@ -36,3 +36,8 @@ export type ToolEvent = {
   result?: any
   error?: string
 }
+
+export type ApiConfig = {
+  apiBaseUrl: string
+  bearerToken: string
+}

@@ -10,24 +10,24 @@ export default function Sidebar({ tools }: { tools: Tool[] }) {
   }, [tools, query])
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-white/70 shadow-[0_20px_60px_var(--shadow)] p-4 backdrop-blur">
-      <div className="text-sm uppercase tracking-[0.2em] text-black/50">Tools</div>
+    <div className="panel p-4 h-full flex flex-col min-h-0">
+      <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Tools</div>
       <input
-        className="mt-3 w-full rounded-xl border border-black/10 px-3 py-2 text-sm bg-white"
+        className="input mt-3"
         placeholder="Search tools"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-      <div className="mt-4 space-y-2 max-h-[420px] overflow-auto">
+      <div className="mt-4 space-y-2 overflow-auto flex-1 min-h-0">
         {filtered.map((tool) => (
-          <div key={tool.name} className="rounded-xl border border-black/10 bg-white px-3 py-2">
-            <div className="text-sm font-semibold text-black">{tool.name}</div>
-            <div className="text-xs text-black/60">{tool.description}</div>
-            <div className="text-[11px] text-black/40 mt-1">{tool.source}</div>
+          <div key={tool.name} className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+            <div className="text-sm font-semibold text-slate-800">{tool.name}</div>
+            <div className="text-xs text-slate-500">{tool.description}</div>
+            <div className="text-[11px] text-slate-400 mt-1">{tool.source}</div>
           </div>
         ))}
         {filtered.length === 0 && (
-          <div className="text-sm text-black/40">No tools</div>
+          <div className="text-sm text-slate-400">No tools</div>
         )}
       </div>
     </div>

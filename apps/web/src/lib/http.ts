@@ -1,4 +1,4 @@
-import { Status, Tool, FileItem } from "@/lib/types"
+import { Status, Tool, FileItem, ApiConfig } from "@/lib/types"
 
 async function apiFetch(hostUrl: string, path: string, options: RequestInit) {
   const url = import.meta.env.DEV
@@ -44,4 +44,16 @@ export async function uploadFile(hostUrl: string, file: File) {
   const resp = await fetch(url, { method: "POST", body: formData, headers })
   if (!resp.ok) return null
   return await resp.json()
+}
+
+export async function getConfig(hostUrl: string): Promise<ApiConfig | null> {
+  return await apiFetch(hostUrl, "/config", { method: "GET" })
+}
+
+export async function setConfig(hostUrl: string, config: ApiConfig): Promise<ApiConfig | null> {
+  return await apiFetch(hostUrl, "/config", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(config)
+  })
 }

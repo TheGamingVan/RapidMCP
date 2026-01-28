@@ -18,6 +18,7 @@ from stdio_mcp_client import StdioMcpClient
 LOG_DIR = Path(__file__).resolve().parents[2] / "log"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 LOG_PATH = LOG_DIR / "host-service.log"
+API_CONFIG_PATH = Path(__file__).resolve().parents[2] / "data" / "api_config.json"
 
 logger = logging.getLogger("host-service")
 if not logger.handlers:
@@ -60,6 +61,30 @@ last_tools_refresh = 0.0
 last_fs_tool_names: set[str] = set()
 session_conversations: Dict[str, List[Dict[str, Any]]] = {}
 session_state: Dict[str, Dict[str, Any]] = {}
+
+def read_api_config() -> Dict[str, str]:
+    if not API_CONFIG_PATH.exists():
+        return {"apiBaseUrl": "", "bearerToken": ""}
+    try:
+        data = json.loads(API_CONFIG_PATH.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            return {"apiBaseUrl": "", "bearerToken": ""}
+        return {
+            "apiBaseUrl": str(data.get("apiBaseUrl") or ""),
+            "bearerToken": str(data.get("bearerToken") or ""),
+        }
+    except Exception:
+        logger.exception("Failed to read api config")
+        return {"apiBaseUrl": "", "bearerToken": ""}
+
+def write_api_config(config: Dict[str, str]) -> Dict[str, str]:
+    API_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "apiBaseUrl": str(config.get("apiBaseUrl") or ""),
+        "bearerToken": str(config.get("bearerToken") or ""),
+    }
+    API_CONFIG_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return payload
 
 def compute_allowed_dirs() -> List[str]:
     dirs = [os.path.abspath(FILE_STORE_DIR)]
@@ -122,6 +147,16 @@ async def resolve_status() -> Dict[str, Any]:
 async def status() -> Dict[str, Any]:
     return await resolve_status()
 
+@app.get("/config")
+async def get_config() -> Dict[str, str]:
+    return read_api_config()
+
+@app.post("/config")
+async def set_config(payload: Dict[str, Any]) -> Dict[str, str]:
+    api_base = payload.get("apiBaseUrl") if isinstance(payload, dict) else ""
+    bearer = payload.get("bearerToken") if isinstance(payload, dict) else ""
+    return write_api_config({"apiBaseUrl": api_base or "", "bearerToken": bearer or ""})
+
 async def get_tools() -> List[Dict[str, Any]]:
     global cached_tools, last_tools_refresh, last_fs_tool_names
     now = time.time()
@@ -138,7 +173,11 @@ async def get_tools() -> List[Dict[str, Any]]:
         })
     fs_tools = []
     if FS_MCP_ENABLED and stdio_client.is_running:
-        fs_tools = await stdio_client.tools_list()
+        try:
+            fs_tools = await stdio_client.tools_list()
+        except Exception as exc:
+            logger.warning("fs MCP tools_list failed: %s", exc)
+            fs_tools = []
     last_fs_tool_names = {t.get("name", "") for t in fs_tools if isinstance(t, dict)}
     for t in fs_tools:
         tools.append({
@@ -294,6 +333,12 @@ async def handle_user_message(ws: WebSocket, session_id: Optional[str], content:
             return match.group(1).rstrip(" .")
         return None
 
+    def extract_filename(text: str) -> Optional[str]:
+        match = re.search(r"\b([A-Za-z0-9_.-]+)\.(txt|json|md)\b", text, re.IGNORECASE)
+        if match:
+            return match.group(0)
+        return None
+
     delete_all = bool(re.search(r"\bdelete\b.*\bfiles?\b", content_text, re.IGNORECASE))
     ping_count = None
     file_base = "ping"
@@ -388,6 +433,20 @@ async def handle_user_message(ws: WebSocket, session_id: Optional[str], content:
                 else:
                     args[key] = "test"
         return args
+
+    def stringify_tool_output(result: Any) -> str:
+        if isinstance(result, dict) and "body" in result:
+            body = result.get("body")
+            if isinstance(body, str):
+                try:
+                    parsed = json.loads(body)
+                    return json.dumps(parsed, indent=2)
+                except Exception:
+                    return body
+            return json.dumps(body, indent=2) if body is not None else ""
+        if isinstance(result, (dict, list)):
+            return json.dumps(result, indent=2)
+        return str(result)
 
     # Deterministic execution for delete + batch ping requests.
     if can_delete or can_ping:
@@ -498,6 +557,8 @@ async def handle_user_message(ws: WebSocket, session_id: Optional[str], content:
     if content_text:
         conversation.append({"role": "user", "content": content_text})
     used_fs_write = False
+    last_tool_result: Any = None
+    last_tool_name: Optional[str] = None
     needs_file_write = bool(re.search(r"\b(save|write|store|put)\b", content_text, re.IGNORECASE)) and bool(
         re.search(r"\bfile\b|\\.txt\\b|\\.json\\b|\\.md\\b", content_text, re.IGNORECASE)
     )
@@ -515,6 +576,8 @@ async def handle_user_message(ws: WebSocket, session_id: Optional[str], content:
                 await ws.send_text(json.dumps({"type": "tool_end", "callId": call_id, "result": result}))
                 if name.startswith("fs.") and re.search(r"write|save", name, re.IGNORECASE):
                     used_fs_write = True
+                last_tool_result = result
+                last_tool_name = name
                 conversation.append({"role": "tool", "name": name, "content": json.dumps(result)})
                 content = ""
                 continue
@@ -525,6 +588,22 @@ async def handle_user_message(ws: WebSocket, session_id: Optional[str], content:
                 continue
         message = decision.get("message", "")
         if needs_file_write and not used_fs_write:
+            filename = extract_filename(content_text)
+            if filename and last_tool_result is not None and "fs.write_file" in tool_names:
+                target_dir = default_fs_dir()
+                explicit_dir = extract_target_dir(content_text)
+                if explicit_dir and os.path.isdir(explicit_dir) and is_allowed_path(explicit_dir):
+                    target_dir = explicit_dir
+                file_path = os.path.join(target_dir, filename)
+                content_value = stringify_tool_output(last_tool_result)
+                await run_tool_ws("fs.write_file", {"path": file_path, "content": content_value})
+                summary = f"Wrote file: {file_path}"
+                await emit_assistant_message(ws, summary)
+                if session_id is not None:
+                    session_conversations[session_id] = conversation + [
+                        {"role": "assistant", "content": summary},
+                    ]
+                return
             if i < max_iters - 1:
                 conversation.append({"role": "assistant", "content": message})
                 conversation.append({

@@ -10,20 +10,31 @@ export default function StatusBar({
   hostUrl,
   connected,
   onHostUrlChange,
-  onReconnect
+  onReconnect,
+  apiConfig,
+  onApiConfigChange,
+  onSaveApiConfig,
+  isSavingConfig
 }: {
   status: Status
   hostUrl: string
   connected: boolean
   onHostUrlChange: (value: string) => void
   onReconnect: () => void
+  apiConfig: { apiBaseUrl: string; bearerToken: string }
+  onApiConfigChange: (value: Partial<{ apiBaseUrl: string; bearerToken: string }>) => void
+  onSaveApiConfig: () => void
+  isSavingConfig: boolean
 }) {
   return (
-    <div className="rounded-2xl border border-black/10 bg-white/70 shadow-[0_20px_60px_var(--shadow)] p-4 backdrop-blur">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="space-y-1">
-          <div className="text-sm uppercase tracking-[0.2em] text-black/50">RapidMCP Host</div>
-          <div className="flex flex-wrap items-center gap-3 text-sm">
+    <div className="w-full border-b border-slate-200 bg-white">
+      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-xl bg-emerald-500 text-white grid place-items-center font-bold">R</div>
+            <div className="text-lg font-semibold">RapidMCP</div>
+          </div>
+          <div className="hidden lg:flex items-center gap-4 text-sm text-slate-500">
             <div className="flex items-center gap-2">
               <span className={`h-2 w-2 rounded-full ${statusColor(status.gemini)}`} />
               <span>Gemini</span>
@@ -36,22 +47,40 @@ export default function StatusBar({
               <span className={`h-2 w-2 rounded-full ${statusColor(status.fsMcp)}`} />
               <span>FS MCP</span>
             </div>
-            <div className="text-black/60">Model: {status.model}</div>
-            <div className="text-black/60">Tools: {status.toolsCount}</div>
+            <div>Model: {status.model}</div>
+            <div>Tools: {status.toolsCount}</div>
           </div>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <input
-            className="w-full sm:w-72 rounded-xl border border-black/10 px-3 py-2 text-sm bg-white"
-            value={hostUrl}
-            onChange={(e) => onHostUrlChange(e.target.value)}
-          />
-          <button
-            className="rounded-xl bg-black text-white px-4 py-2 text-sm"
-            onClick={onReconnect}
-          >
-            {connected ? "Reconnect" : "Connect"}
-          </button>
+        <div className="flex flex-col gap-3 sm:w-[360px]">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <input
+              className="input sm:w-72"
+              value={hostUrl}
+              onChange={(e) => onHostUrlChange(e.target.value)}
+              placeholder="Host URL"
+            />
+            <button className="btn-primary" onClick={onReconnect}>
+              {connected ? "Reconnect" : "Connect"}
+            </button>
+          </div>
+          <div className="grid grid-cols-1 gap-2">
+            <input
+              className="input"
+              value={apiConfig.apiBaseUrl}
+              onChange={(e) => onApiConfigChange({ apiBaseUrl: e.target.value })}
+              placeholder="API Base URL"
+            />
+            <input
+              className="input"
+              type="password"
+              value={apiConfig.bearerToken}
+              onChange={(e) => onApiConfigChange({ bearerToken: e.target.value })}
+              placeholder="Bearer Token"
+            />
+            <button className="btn-primary" onClick={onSaveApiConfig} disabled={isSavingConfig}>
+              {isSavingConfig ? "Saving..." : "Save API Config"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

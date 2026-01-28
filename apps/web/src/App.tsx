@@ -4,10 +4,10 @@ import Sidebar from "@/components/Sidebar"
 import ChatPanel from "@/components/ChatPanel"
 import ToolActivity from "@/components/ToolActivity"
 import FilesPanel from "@/components/FilesPanel"
-import { Status, Tool, FileItem, ChatMessage, ToolEvent } from "@/lib/types"
+import { Status, Tool, FileItem, ChatMessage, ToolEvent, ApiConfig } from "@/lib/types"
 import { connectWs, WsClient } from "@/lib/ws"
-import { getFiles, getStatus, getTools, uploadFile, deleteFile } from "@/lib/http"
-import { getSessionId, loadHostUrl, saveHostUrl } from "@/lib/store"
+import { getFiles, getStatus, getTools, uploadFile, deleteFile, getConfig, setConfig } from "@/lib/http"
+import { getSessionId, loadHostUrl, saveHostUrl, loadApiConfig, saveApiConfig } from "@/lib/store"
 
 const emptyStatus: Status = {
   gemini: "down",
@@ -30,12 +30,15 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [sessionId, setSessionId] = useState("")
   const [wsNonce, setWsNonce] = useState(0)
+  const [apiConfig, setApiConfigState] = useState<ApiConfig>({ apiBaseUrl: "", bearerToken: "" })
+  const [isSavingConfig, setIsSavingConfig] = useState(false)
   const wsRef = useRef<WsClient | null>(null)
 
   useEffect(() => {
     const url = loadHostUrl() || "http://localhost:8080"
     setHostUrl(url)
     setSessionId(getSessionId())
+    setApiConfigState(loadApiConfig())
   }, [])
 
   useEffect(() => {
@@ -58,6 +61,21 @@ export default function App() {
   useEffect(() => {
     if (!hostUrl) return
     saveHostUrl(hostUrl)
+  }, [hostUrl])
+
+  useEffect(() => {
+    if (!hostUrl) return
+    let alive = true
+    const load = async () => {
+      const cfg = await getConfig(hostUrl)
+      if (!alive || !cfg) return
+      setApiConfigState(cfg)
+      saveApiConfig(cfg.apiBaseUrl, cfg.bearerToken)
+    }
+    load()
+    return () => {
+      alive = false
+    }
   }, [hostUrl])
 
   useEffect(() => {
@@ -152,6 +170,20 @@ export default function App() {
     setWsNonce((v) => v + 1)
   }
 
+  const handleConfigChange = (partial: Partial<ApiConfig>) => {
+    setApiConfigState((prev) => ({ ...prev, ...partial }))
+  }
+
+  const handleConfigSave = async () => {
+    setIsSavingConfig(true)
+    const saved = await setConfig(hostUrl, apiConfig)
+    if (saved) {
+      setApiConfigState(saved)
+      saveApiConfig(saved.apiBaseUrl, saved.bearerToken)
+    }
+    setIsSavingConfig(false)
+  }
+
   const handleUpload = async (file: File) => {
     await uploadFile(hostUrl, file)
     const nextFiles = await getFiles(hostUrl)
@@ -169,29 +201,35 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen px-6 py-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <StatusBar
-          status={status}
-          hostUrl={hostUrl}
-          connected={connected}
-          onHostUrlChange={setHostUrl}
-          onReconnect={handleReconnect}
-        />
-        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
-          <Sidebar tools={tools} />
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6">
-              <ChatPanel messages={messages} draftAssistant={draftAssistant} onSend={handleSend} isProcessing={isProcessing} />
-              <ToolActivity events={toolEvents} />
+    <div className="h-screen flex flex-col">
+      <StatusBar
+        status={status}
+        hostUrl={hostUrl}
+        connected={connected}
+        onHostUrlChange={setHostUrl}
+        onReconnect={handleReconnect}
+        apiConfig={apiConfig}
+        onApiConfigChange={handleConfigChange}
+        onSaveApiConfig={handleConfigSave}
+        isSavingConfig={isSavingConfig}
+      />
+      <div className="flex-1 px-6 py-6 min-h-0 overflow-hidden">
+        <div className="max-w-6xl mx-auto h-full overflow-hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6 h-full items-stretch min-h-0">
+            <Sidebar tools={tools} />
+            <div className="grid grid-rows-[minmax(0,2fr)_minmax(0,1fr)] gap-6 h-full min-h-0">
+              <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 min-h-0">
+                <ChatPanel messages={messages} draftAssistant={draftAssistant} onSend={handleSend} isProcessing={isProcessing} />
+                <ToolActivity events={toolEvents} />
+              </div>
+              <FilesPanel
+                files={files}
+                selectedFiles={selectedFiles}
+                onToggle={toggleFile}
+                onUpload={handleUpload}
+                onDelete={handleDelete}
+              />
             </div>
-            <FilesPanel
-              files={files}
-              selectedFiles={selectedFiles}
-              onToggle={toggleFile}
-              onUpload={handleUpload}
-              onDelete={handleDelete}
-            />
           </div>
         </div>
       </div>
