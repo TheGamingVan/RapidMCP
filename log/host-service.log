@@ -264,3 +264,8 @@ NameError: name 'is_allowed_path' is not defined
 2026-01-27 00:29:59,182 WARNING host-service.fs-mcp - npx launch failed, retrying with npx.cmd
 2026-01-27 00:29:59,189 INFO host-service - Startup complete
 2026-01-27 00:30:00,498 WARNING host-service.fs-mcp - fs MCP stderr: Secure MCP Filesystem Server running on stdio
+2026-01-27 00:35:58,800 INFO host-service - HOST_PORT=8080 MCP_API_URL=http://localhost:8000/mcp/ FS_MCP_ENABLED=True FILE_STORE_DIR=D:\Projects\RapidMCP\.\data
+2026-01-27 00:35:58,821 INFO host-service.fs-mcp - Starting fs MCP: npx -y @modelcontextprotocol/server-filesystem D:\Projects\RapidMCP\data D:\Projects\RapidMCP\data
+2026-01-27 00:35:58,824 WARNING host-service.fs-mcp - npx launch failed, retrying with npx.cmd
+2026-01-27 00:35:58,829 INFO host-service - Startup complete
+2026-01-27 00:36:00,034 WARNING host-service.fs-mcp - fs MCP stderr: Secure MCP Filesystem Server running on stdio

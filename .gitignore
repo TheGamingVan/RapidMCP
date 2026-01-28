@@ -1,3 +1,4 @@
 .run/
 apps/web/node_modules/
 data/
+log/
