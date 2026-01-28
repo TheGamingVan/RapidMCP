@@ -10,7 +10,7 @@ export type Tool = {
   name: string
   description: string
   inputSchema: any
-  source: "api" | "fs"
+  source: "api" | "fs" | "host"
 }
 
 export type FileItem = {
@@ -40,4 +40,6 @@ export type ToolEvent = {
 export type ApiConfig = {
   apiBaseUrl: string
   bearerToken: string
+  geminiApiKey: string
+  geminiModel: string
 }

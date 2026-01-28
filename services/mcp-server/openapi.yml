@@ -521,7 +521,7 @@ paths:
       summary: 'Get Base Asset'
       operationId: getBaseAsset
       description: "Returns detailed information about an uploaded 3D model asset, including its processing status,\nmetadata, and available downloads. Use this endpoint to monitor upload status or use our webhook\nto get notified when the upload is complete.\n\nKey Field `upload_status`\n\nThe `upload_status` field tracks the model's progress through various processing stages.\n\nMost important values are:\n- \"complete\": All processing completed successfully\n- \"Importing Failed\": General processing failure\n\nOther values are:\n- \"incomplete\": Initial state, upload not yet finished\n- \"waiting\": Upload complete, waiting to start processing\n- \"unzipping\": Extracting uploaded files\n- \"analysing\": Analyzing model structure and contents\n- \"dataprepping\": Preparing data for processing\n- \"dataprepping failed\": Data preparation encountered an error\n- \"RapidQC\": Model is in quality control phase\n- \"Importing Failed Import Limit Exceeded\": Processing failed due to import limits\n\nError Handling:\n1. Check `upload_status` first:\n   - \"complete\" indicates successful processing\n\n2. If `has_errors` is true:\n   - Set to true if RapidPipeline 3D Processor creates a error.log file with errors\n   - Check \"error.log\" in the downloads section for details"
-      parameters: []
+      parameters: [id]
       responses:
         200:
           description: ''

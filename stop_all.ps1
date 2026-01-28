@@ -38,9 +38,7 @@ function Stop-ByPort {
 Stop-ByPidFile -Name "web"
 Stop-ByPidFile -Name "host-service"
 Stop-ByPidFile -Name "mcp-server"
-Stop-ByPidFile -Name "dummy-api"
 
 Stop-ByPort -Port 3000 -Name "web"
 Stop-ByPort -Port 8080 -Name "host-service"
 Stop-ByPort -Port 8000 -Name "mcp-server"
-Stop-ByPort -Port 9000 -Name "dummy-api"

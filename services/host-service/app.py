@@ -14,6 +14,7 @@ from file_store import FileStore
 from gemini_client import GeminiClient
 from mcp_http_client import McpHttpClient
 from stdio_mcp_client import StdioMcpClient
+import httpx
 
 LOG_DIR = Path(__file__).resolve().parents[2] / "log"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -43,7 +44,7 @@ app.add_middleware(
 
 HOST_PORT = int(os.getenv("HOST_PORT", "8080"))
 MCP_API_URL = os.getenv("MCP_API_URL", "http://localhost:8000/mcp")
-FILE_STORE_DIR = os.getenv("FILE_STORE_DIR", "./services/host-service/files")
+FILE_STORE_DIR = os.getenv("FILE_STORE_DIR", "./data")
 FS_MCP_ENABLED = os.getenv("FS_MCP_ENABLED", "true").lower() == "true"
 FS_ALLOWED_DIRS = os.getenv("FS_ALLOWED_DIRS", "")
 
@@ -64,26 +65,32 @@ session_state: Dict[str, Dict[str, Any]] = {}
 
 def read_api_config() -> Dict[str, str]:
     if not API_CONFIG_PATH.exists():
-        return {"apiBaseUrl": "", "bearerToken": ""}
+        return {"apiBaseUrl": "", "bearerToken": "", "geminiApiKey": "", "geminiModel": ""}
     try:
         data = json.loads(API_CONFIG_PATH.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
-            return {"apiBaseUrl": "", "bearerToken": ""}
+            return {"apiBaseUrl": "", "bearerToken": "", "geminiApiKey": "", "geminiModel": ""}
         return {
             "apiBaseUrl": str(data.get("apiBaseUrl") or ""),
             "bearerToken": str(data.get("bearerToken") or ""),
+            "geminiApiKey": str(data.get("geminiApiKey") or ""),
+            "geminiModel": str(data.get("geminiModel") or ""),
         }
     except Exception:
         logger.exception("Failed to read api config")
-        return {"apiBaseUrl": "", "bearerToken": ""}
+        return {"apiBaseUrl": "", "bearerToken": "", "geminiApiKey": "", "geminiModel": ""}
 
 def write_api_config(config: Dict[str, str]) -> Dict[str, str]:
     API_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "apiBaseUrl": str(config.get("apiBaseUrl") or ""),
         "bearerToken": str(config.get("bearerToken") or ""),
+        "geminiApiKey": str(config.get("geminiApiKey") or ""),
+        "geminiModel": str(config.get("geminiModel") or ""),
     }
-    API_CONFIG_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    tmp_path = API_CONFIG_PATH.with_suffix(API_CONFIG_PATH.suffix + ".tmp")
+    tmp_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    tmp_path.replace(API_CONFIG_PATH)
     return payload
 
 def compute_allowed_dirs() -> List[str]:
@@ -132,6 +139,7 @@ async def health() -> Dict[str, str]:
 
 async def resolve_status() -> Dict[str, Any]:
     gemini_ok = gemini_client.is_configured()
+    current_model = gemini_client.current_model()
     mcp_ok = await mcp_http.ping()
     fs_ok = stdio_client.is_running
     tools = await get_tools()
@@ -139,7 +147,7 @@ async def resolve_status() -> Dict[str, Any]:
         "gemini": "ok" if gemini_ok else "down",
         "mcpApi": "ok" if mcp_ok else "down",
         "fsMcp": "ok" if fs_ok else "down",
-        "model": gemini_client.model_name,
+        "model": current_model,
         "toolsCount": len(tools),
     }
 
@@ -155,7 +163,51 @@ async def get_config() -> Dict[str, str]:
 async def set_config(payload: Dict[str, Any]) -> Dict[str, str]:
     api_base = payload.get("apiBaseUrl") if isinstance(payload, dict) else ""
     bearer = payload.get("bearerToken") if isinstance(payload, dict) else ""
-    return write_api_config({"apiBaseUrl": api_base or "", "bearerToken": bearer or ""})
+    gemini_key = payload.get("geminiApiKey") if isinstance(payload, dict) else ""
+    gemini_model = payload.get("geminiModel") if isinstance(payload, dict) else ""
+    return write_api_config({
+        "apiBaseUrl": api_base or "",
+        "bearerToken": bearer or "",
+        "geminiApiKey": gemini_key or "",
+        "geminiModel": gemini_model or "",
+    })
+
+@app.get("/gemini/models")
+async def list_gemini_models() -> Dict[str, Any]:
+    cfg = read_api_config()
+    api_key = cfg.get("geminiApiKey") or os.getenv("GEMINI_API_KEY", "")
+    if not api_key:
+        return {"models": []}
+    url = "https://generativelanguage.googleapis.com/v1beta/models"
+    params = {"pageSize": 1000, "key": api_key}
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.get(url, params=params)
+            resp.raise_for_status()
+            data = resp.json()
+    except Exception as exc:
+        logger.warning("Failed to fetch Gemini models: %s", exc)
+        return {"models": []}
+    models = []
+    for item in data.get("models", []) if isinstance(data, dict) else []:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name", "")
+        base = item.get("baseModelId", "")
+        methods = item.get("supportedGenerationMethods", []) if isinstance(item, dict) else []
+        candidate = base or name
+        if isinstance(candidate, str) and candidate.startswith("models/"):
+            candidate = candidate.replace("models/", "", 1)
+        if not isinstance(candidate, str) or not candidate:
+            continue
+        lower = candidate.lower()
+        if any(token in lower for token in ("image", "audio", "tts", "embedding")):
+            continue
+        if isinstance(methods, list) and methods and "generateContent" not in methods and "streamGenerateContent" not in methods:
+            continue
+        models.append(candidate)
+    models = sorted(set(models))
+    return {"models": models}
 
 async def get_tools() -> List[Dict[str, Any]]:
     global cached_tools, last_tools_refresh, last_fs_tool_names
@@ -186,6 +238,20 @@ async def get_tools() -> List[Dict[str, Any]]:
             "inputSchema": t.get("inputSchema", {}),
             "source": "fs",
         })
+    tools.append({
+        "name": "http.put",
+        "description": "Upload a local file to a URL via HTTP PUT. Use for S3 signed URLs.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "url": {"type": "string", "description": "Destination URL (e.g., signed S3 URL)."},
+                "filePath": {"type": "string", "description": "Local path to the file to upload."},
+                "contentType": {"type": "string", "description": "Optional Content-Type header."}
+            },
+            "required": ["url", "filePath"]
+        },
+        "source": "host",
+    })
     if "delete_file" not in last_fs_tool_names:
         tools.append({
             "name": "fs.delete_file",
@@ -339,41 +405,7 @@ async def handle_user_message(ws: WebSocket, session_id: Optional[str], content:
             return match.group(0)
         return None
 
-    delete_all = bool(re.search(r"\bdelete\b.*\bfiles?\b", content_text, re.IGNORECASE))
-    ping_count = None
-    file_base = "ping"
-    name_fmt = None
-    range_match = re.search(r"\b([a-z0-9_-]+)\((\d+)\s*-\s*(\d+)\)\.txt\b", content_text, re.IGNORECASE)
-    if range_match:
-        file_base = range_match.group(1)
-        start = int(range_match.group(2))
-        end = int(range_match.group(3))
-        if end >= start:
-            ping_count = end - start + 1
-            name_fmt = f"{file_base}({{i}}).txt"
-    times_match = re.search(r"\bping\b.*?(\d+)\s*times\b", content_text, re.IGNORECASE)
-    if times_match:
-        ping_count = int(times_match.group(1))
-    if ping_count is not None and name_fmt is None:
-        name_fmt = f"{file_base}{{i}}.txt"
-
-    can_delete = delete_all and "fs.list_directory" in tool_names and "fs.delete_file" in tool_names
-    can_ping = ping_count is not None and ping_count > 0 and "api.ping" in tool_names and "fs.write_file" in tool_names
-    wants_all_api = bool(re.search(r"\b(all|every)\b.*\bapi\b.*\b(endpoints|tools)\b", content_text, re.IGNORECASE))
-    wants_health = bool(re.search(r"\bhealth\b", content_text, re.IGNORECASE))
-    wants_stats = bool(re.search(r"\bstats?\b", content_text, re.IGNORECASE))
-    wants_widgets = bool(re.search(r"\bwidget\b", content_text, re.IGNORECASE))
-    wants_repeat = bool(re.search(r"\b(same|as before|again|do it as before|do everything again)\b", content_text, re.IGNORECASE))
-    wants_also = bool(re.search(r"\b(now\s+also|also)\b", content_text, re.IGNORECASE))
-    wants_text_files = bool(
-        re.search(r"\b(text\s+files?|files?)\b", content_text, re.IGNORECASE)
-        or re.search(r"\.txt\b", content_text, re.IGNORECASE)
-        or re.search(r"\bput\b.*\bfiles?\b", content_text, re.IGNORECASE)
-    )
-    if not wants_text_files and (wants_repeat or wants_also) and state.get("last_selected_tools"):
-        wants_text_files = True
     can_write_files = "fs.write_file" in tool_names
-    widget_tool_names = {"api.list_widgets", "api.get_widget", "api.search_widgets"}
 
     def summarize_result(result: Any) -> str:
         if isinstance(result, dict) and "status_code" in result and "body" in result:
@@ -448,125 +480,32 @@ async def handle_user_message(ws: WebSocket, session_id: Optional[str], content:
             return json.dumps(result, indent=2)
         return str(result)
 
-    # Deterministic execution for delete + batch ping requests.
-    if can_delete or can_ping:
-        target_dir = default_fs_dir()
-        explicit_dir = extract_target_dir(content_text)
-        if explicit_dir and os.path.isdir(explicit_dir) and is_allowed_path(explicit_dir):
-            target_dir = explicit_dir
-        deleted_paths: List[str] = []
-        if can_delete:
-            list_result = await run_tool_ws("fs.list_directory", {"path": target_dir})
-            for entry in extract_entries(list_result):
-                entry_path = None
-                entry_type = None
-                if isinstance(entry, dict):
-                    entry_type = entry.get("type") or entry.get("kind")
-                    entry_path = entry.get("path")
-                    if not entry_path and entry.get("name"):
-                        entry_path = os.path.join(target_dir, str(entry.get("name")))
-                elif isinstance(entry, str):
-                    entry_path = os.path.join(target_dir, entry)
-                if entry_type and str(entry_type).lower() == "directory":
-                    continue
-                if entry_path:
-                    await run_tool_ws("fs.delete_file", {"path": entry_path})
-                    deleted_paths.append(entry_path)
-        written_paths: List[str] = []
-        if can_ping:
-            for i in range(1, ping_count + 1):
-                result = await run_tool_ws("api.ping", {})
-                content_value = result if isinstance(result, str) else json.dumps(result)
-                filename = name_fmt.format(i=i) if name_fmt else f"{file_base}{i}.txt"
-                file_path = os.path.join(target_dir, filename)
-                await run_tool_ws("fs.write_file", {"path": file_path, "content": content_value})
-                written_paths.append(file_path)
-        summary_parts = []
-        if can_delete:
-            summary_parts.append(f"Deleted {len(deleted_paths)} file(s) from {target_dir}.")
-        if can_ping:
-            summary_parts.append(f"Wrote {len(written_paths)} ping response(s) to: " + ", ".join(written_paths))
-        summary = " ".join(summary_parts) if summary_parts else "Done."
-        await emit_assistant_message(ws, summary)
-        if session_id is not None:
-            session_conversations[session_id] = memory + [
-                {"role": "user", "content": content_text},
-                {"role": "assistant", "content": summary},
-            ]
-        return
-
-    # Deterministic execution for all API tools or specific health/stats to files.
-    if can_write_files and api_tools and (wants_all_api or ((wants_health or wants_stats or wants_widgets or wants_repeat or wants_also) and wants_text_files)):
-        target_dir = default_fs_dir()
-        explicit_dir = extract_target_dir(content_text)
-        if explicit_dir and os.path.isdir(explicit_dir) and is_allowed_path(explicit_dir):
-            target_dir = explicit_dir
-        selected_tools: List[Dict[str, Any]] = []
-        if wants_all_api:
-            selected_tools = api_tools
-        else:
-            if wants_repeat and state.get("last_selected_tools"):
-                selected_names = set(state.get("last_selected_tools", []))
-                selected_tools.extend([t for t in api_tools if t.get("name") in selected_names])
-            if wants_health:
-                selected_tools.extend([t for t in api_tools if t.get("name") == "api.health_check"])
-            if wants_stats:
-                selected_tools.extend([t for t in api_tools if t.get("name") == "api.get_stats"])
-            if wants_widgets:
-                selected_tools.extend([t for t in api_tools if t.get("name") in widget_tool_names])
-            if wants_also and wants_widgets and state.get("last_selected_tools"):
-                selected_names = set(state.get("last_selected_tools", []))
-                for t in api_tools:
-                    if t.get("name") in selected_names and t not in selected_tools:
-                        selected_tools.append(t)
-        # Deduplicate while preserving order.
-        seen_names: set[str] = set()
-        deduped: List[Dict[str, Any]] = []
-        for t in selected_tools:
-            name = t.get("name", "")
-            if name and name not in seen_names:
-                seen_names.add(name)
-                deduped.append(t)
-        selected_tools = deduped
-        written_paths: List[str] = []
-        for tool in selected_tools:
-            tool_name = tool.get("name", "")
-            if not tool_name:
-                continue
-            args = default_args_for_tool(tool)
-            result = await run_tool_ws(tool_name, args)
-            content_value = summarize_result(result)
-            base = tool_name.replace("api.", "")
-            file_path = os.path.join(target_dir, f"{base}.txt")
-            await run_tool_ws("fs.write_file", {"path": file_path, "content": content_value})
-            written_paths.append(file_path)
-        summary = "Wrote API outputs to: " + ", ".join(written_paths) if written_paths else "No API tools matched."
-        await emit_assistant_message(ws, summary)
-        if session_id is not None:
-            state = session_state.get(session_id, {})
-            state["last_selected_tools"] = [t.get("name") for t in selected_tools if t.get("name")]
-            state["last_target_dir"] = target_dir
-            session_state[session_id] = state
-            session_conversations[session_id] = memory + [
-                {"role": "user", "content": content_text},
-                {"role": "assistant", "content": summary},
-            ]
-        return
-
     conversation: List[Dict[str, Any]] = list(memory)
     if content_text:
         conversation.append({"role": "user", "content": content_text})
     used_fs_write = False
     last_tool_result: Any = None
     last_tool_name: Optional[str] = None
-    needs_file_write = bool(re.search(r"\b(save|write|store|put)\b", content_text, re.IGNORECASE)) and bool(
-        re.search(r"\bfile\b|\\.txt\\b|\\.json\\b|\\.md\\b", content_text, re.IGNORECASE)
-    )
     max_iters = 12
     for i in range(max_iters):
         decision = await gemini_client.decide(conversation, tools, "", file_uris)
-        if decision.get("type") == "tool":
+        decision_type = decision.get("type")
+        if decision_type not in ("tool", "final"):
+            logger.warning("Model returned invalid decision type: %s", decision)
+            message = "Model returned an invalid response. Please try again."
+            await emit_assistant_message(ws, message)
+            if session_id is not None:
+                session_conversations[session_id] = conversation + [{"role": "assistant", "content": message}]
+            return
+        if decision_type == "tool":
             name = decision.get("name", "")
+            if not isinstance(name, str) or not name:
+                logger.warning("Model returned tool call without name: %s", decision)
+                message = "Model returned an invalid tool call. Please try again."
+                await emit_assistant_message(ws, message)
+                if session_id is not None:
+                    session_conversations[session_id] = conversation + [{"role": "assistant", "content": message}]
+                return
             arguments = decision.get("arguments", {})
             call_id = str(uuid.uuid4())
             conversation.append({"role": "assistant", "content": json.dumps({"tool": name, "arguments": arguments})})
@@ -587,41 +526,9 @@ async def handle_user_message(ws: WebSocket, session_id: Optional[str], content:
                 content = ""
                 continue
         message = decision.get("message", "")
-        if needs_file_write and not used_fs_write:
-            filename = extract_filename(content_text)
-            if filename and last_tool_result is not None and "fs.write_file" in tool_names:
-                target_dir = default_fs_dir()
-                explicit_dir = extract_target_dir(content_text)
-                if explicit_dir and os.path.isdir(explicit_dir) and is_allowed_path(explicit_dir):
-                    target_dir = explicit_dir
-                file_path = os.path.join(target_dir, filename)
-                content_value = stringify_tool_output(last_tool_result)
-                await run_tool_ws("fs.write_file", {"path": file_path, "content": content_value})
-                summary = f"Wrote file: {file_path}"
-                await emit_assistant_message(ws, summary)
-                if session_id is not None:
-                    session_conversations[session_id] = conversation + [
-                        {"role": "assistant", "content": summary},
-                    ]
-                return
-            if i < max_iters - 1:
-                conversation.append({"role": "assistant", "content": message})
-                conversation.append({
-                    "role": "user",
-                    "content": "You still need to write the result into a file using fs.* tools. Continue.",
-                })
-                continue
-            # Last attempt: respond with a clear failure instead of hanging.
-            await emit_assistant_message(
-                ws,
-                "I couldn't complete the file write within the tool budget. "
-                "Please try again or specify the exact filename and directory.",
-            )
-            if session_id is not None:
-                session_conversations[session_id] = conversation + [
-                    {"role": "assistant", "content": "I couldn't complete the file write within the tool budget. Please try again or specify the exact filename and directory."},
-                ]
-            return
+        if not isinstance(message, str) or not message.strip():
+            logger.warning("Model returned empty message: %s", decision)
+            message = "Model returned an empty response. Please try again."
         await emit_assistant_message(ws, message)
         if session_id is not None:
             session_conversations[session_id] = conversation + [{"role": "assistant", "content": message}]
@@ -648,7 +555,7 @@ async def emit_assistant_message(ws: WebSocket, message: str) -> None:
 async def call_tool(name: str, arguments: Dict[str, Any]) -> Any:
     if name.startswith("fs."):
         real_name = name[len("fs."):]
-        if real_name == "delete_file" and real_name not in last_fs_tool_names:
+        if real_name == "delete_file":
             target = arguments.get("path")
             if not isinstance(target, str) or not target:
                 return {"error": "invalid_path"}
@@ -667,4 +574,28 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> Any:
     if name.startswith("api."):
         real_name = name[len("api."):]
         return await mcp_http.tools_call(real_name, arguments)
+    if name == "http.put":
+        url = arguments.get("url")
+        file_path = arguments.get("filePath")
+        content_type = arguments.get("contentType") or "application/octet-stream"
+        if not isinstance(url, str) or not url:
+            return {"error": "invalid_url"}
+        if not isinstance(file_path, str) or not file_path:
+            return {"error": "invalid_file_path"}
+        if not is_allowed_path(file_path):
+            return {"error": "path_not_allowed"}
+        if not os.path.exists(file_path) or not os.path.isfile(file_path):
+            return {"error": "file_not_found"}
+        try:
+            with open(file_path, "rb") as f:
+                data = f.read()
+            async with httpx.AsyncClient(timeout=60) as client:
+                resp = await client.put(url, content=data, headers={"Content-Type": content_type})
+            return {
+                "status_code": resp.status_code,
+                "headers": dict(resp.headers),
+                "body": resp.text,
+            }
+        except Exception as e:
+            return {"error": str(e)}
     return {"error": "unknown_tool"}

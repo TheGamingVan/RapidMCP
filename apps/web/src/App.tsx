@@ -4,9 +4,10 @@ import Sidebar from "@/components/Sidebar"
 import ChatPanel from "@/components/ChatPanel"
 import ToolActivity from "@/components/ToolActivity"
 import FilesPanel from "@/components/FilesPanel"
+import ConfigPanel from "@/components/ConfigPanel"
 import { Status, Tool, FileItem, ChatMessage, ToolEvent, ApiConfig } from "@/lib/types"
 import { connectWs, WsClient } from "@/lib/ws"
-import { getFiles, getStatus, getTools, uploadFile, deleteFile, getConfig, setConfig } from "@/lib/http"
+import { getFiles, getStatus, getTools, uploadFile, deleteFile, getConfig, setConfig, getGeminiModels } from "@/lib/http"
 import { getSessionId, loadHostUrl, saveHostUrl, loadApiConfig, saveApiConfig } from "@/lib/store"
 
 const emptyStatus: Status = {
@@ -16,6 +17,17 @@ const emptyStatus: Status = {
   model: "gemini",
   toolsCount: 0
 }
+
+const COMMON_GEMINI_MODELS = [
+  "gemini-2.5-pro",
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-2.0-flash",
+  "gemini-2.0-flash-lite",
+  "gemini-1.5-pro",
+  "gemini-1.5-flash",
+  "gemini-1.5-flash-8b"
+]
 
 export default function App() {
   const [hostUrl, setHostUrl] = useState("http://localhost:8080")
@@ -30,9 +42,11 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [sessionId, setSessionId] = useState("")
   const [wsNonce, setWsNonce] = useState(0)
-  const [apiConfig, setApiConfigState] = useState<ApiConfig>({ apiBaseUrl: "", bearerToken: "" })
-  const [isSavingConfig, setIsSavingConfig] = useState(false)
+  const [apiConfig, setApiConfigState] = useState<ApiConfig>({ apiBaseUrl: "", bearerToken: "", geminiApiKey: "", geminiModel: "" })
+  const [geminiModels, setGeminiModels] = useState<string[]>([])
   const wsRef = useRef<WsClient | null>(null)
+  const didInitConfigRef = useRef(false)
+  const saveTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
     const url = loadHostUrl() || "http://localhost:8080"
@@ -67,10 +81,19 @@ export default function App() {
     if (!hostUrl) return
     let alive = true
     const load = async () => {
-      const cfg = await getConfig(hostUrl)
-      if (!alive || !cfg) return
-      setApiConfigState(cfg)
-      saveApiConfig(cfg.apiBaseUrl, cfg.bearerToken)
+      try {
+        const cfg = await getConfig(hostUrl)
+        if (!alive || !cfg) return
+        const hasServerConfig = Boolean(cfg.apiBaseUrl || cfg.bearerToken || cfg.geminiApiKey || cfg.geminiModel)
+        if (hasServerConfig) {
+          setApiConfigState(cfg)
+          saveApiConfig(cfg.apiBaseUrl, cfg.bearerToken, cfg.geminiApiKey, cfg.geminiModel)
+        }
+      } finally {
+        if (alive) {
+          didInitConfigRef.current = true
+        }
+      }
     }
     load()
     return () => {
@@ -174,15 +197,35 @@ export default function App() {
     setApiConfigState((prev) => ({ ...prev, ...partial }))
   }
 
-  const handleConfigSave = async () => {
-    setIsSavingConfig(true)
-    const saved = await setConfig(hostUrl, apiConfig)
-    if (saved) {
-      setApiConfigState(saved)
-      saveApiConfig(saved.apiBaseUrl, saved.bearerToken)
+  useEffect(() => {
+    if (!didInitConfigRef.current) return
+    if (!hostUrl) return
+    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = window.setTimeout(async () => {
+      const saved = await setConfig(hostUrl, apiConfig)
+      if (saved) {
+        setApiConfigState(saved)
+        saveApiConfig(saved.apiBaseUrl, saved.bearerToken, saved.geminiApiKey, saved.geminiModel)
+      }
+    }, 400)
+    return () => {
+      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current)
     }
-    setIsSavingConfig(false)
-  }
+  }, [apiConfig, hostUrl])
+
+  useEffect(() => {
+    if (!hostUrl) return
+    let alive = true
+    const loadModels = async () => {
+      const models = await getGeminiModels(hostUrl)
+      if (!alive || !models) return
+      setGeminiModels(models)
+    }
+    loadModels()
+    return () => {
+      alive = false
+    }
+  }, [hostUrl, apiConfig.geminiApiKey])
 
   const handleUpload = async (file: File) => {
     await uploadFile(hostUrl, file)
@@ -210,14 +253,17 @@ export default function App() {
         onReconnect={handleReconnect}
         apiConfig={apiConfig}
         onApiConfigChange={handleConfigChange}
-        onSaveApiConfig={handleConfigSave}
-        isSavingConfig={isSavingConfig}
       />
       <div className="flex-1 px-6 py-6 min-h-0 overflow-hidden">
         <div className="max-w-6xl mx-auto h-full overflow-hidden">
           <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6 h-full items-stretch min-h-0">
             <Sidebar tools={tools} />
-            <div className="grid grid-rows-[minmax(0,2fr)_minmax(0,1fr)] gap-6 h-full min-h-0">
+            <div className="grid grid-rows-[auto_minmax(0,2fr)_minmax(0,1fr)] gap-6 h-full min-h-0">
+              <ConfigPanel
+                config={apiConfig}
+                onChange={handleConfigChange}
+                models={[...new Set([...COMMON_GEMINI_MODELS, ...geminiModels, ...(apiConfig.geminiModel ? [apiConfig.geminiModel] : [])])]}
+              />
               <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 min-h-0">
                 <ChatPanel messages={messages} draftAssistant={draftAssistant} onSend={handleSend} isProcessing={isProcessing} />
                 <ToolActivity events={toolEvents} />

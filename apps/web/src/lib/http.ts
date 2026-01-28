@@ -57,3 +57,8 @@ export async function setConfig(hostUrl: string, config: ApiConfig): Promise<Api
     body: JSON.stringify(config)
   })
 }
+
+export async function getGeminiModels(hostUrl: string): Promise<string[] | null> {
+  const data = await apiFetch(hostUrl, "/gemini/models", { method: "GET" })
+  return data ? data.models || [] : null
+}

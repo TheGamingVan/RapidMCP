@@ -7,13 +7,13 @@ import https from "node:https"
 
 function isAllowed(method: string, targetPath: string): boolean {
   if (method === "GET") {
-    return targetPath === "/status" || targetPath === "/tools" || targetPath === "/files"
+    return targetPath === "/status" || targetPath === "/tools" || targetPath === "/files" || targetPath === "/config" || targetPath === "/gemini/models"
   }
   if (method === "DELETE") {
     return targetPath.startsWith("/files/")
   }
   if (method === "POST") {
-    return targetPath === "/upload"
+    return targetPath === "/upload" || targetPath === "/config"
   }
   return false
 }

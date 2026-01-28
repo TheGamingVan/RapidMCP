@@ -87,9 +87,11 @@ def load_openapi() -> Tuple[bool, List[str]]:
     if not isinstance(paths, dict):
         return False, []
 
-    def register_openapi_tool(name: str, path_template: str, param_names: List[str]) -> None:
+    def register_openapi_tool(name: str, path_template: str, method: str, param_names: List[str], has_body: bool, description: Optional[str]) -> None:
         safe_params = [p for p in param_names if isinstance(p, str) and p.isidentifier()]
         params_sig = ", ".join([f"{p}: Any = None" for p in safe_params])
+        if has_body:
+            params_sig = (params_sig + ", body: Any = None").lstrip(", ")
         lines = [f"async def handler({params_sig}):"] if params_sig else ["async def handler():"]
         lines.append("    runtime = load_runtime_config()")
         lines.append("    api_base = runtime.get(\"apiBaseUrl\") or default_api_base")
@@ -97,6 +99,7 @@ def load_openapi() -> Tuple[bool, List[str]]:
         lines.append("    if not api_base:")
         lines.append("        return {\"status_code\": 500, \"headers\": {}, \"body\": \"API base URL not configured\"}")
         lines.append("    url = api_base + path_template")
+        lines.append(f"    method = \"{method.upper()}\"")
         for p in safe_params:
             lines.append(f"    if \"{{{p}}}\" in url and {p} is not None:")
             lines.append(f"        url = url.replace(\"{{{p}}}\", str({p}))")
@@ -107,8 +110,12 @@ def load_openapi() -> Tuple[bool, List[str]]:
         lines.append("    headers = {}")
         lines.append("    if token:")
         lines.append("        headers[\"Authorization\"] = f\"Bearer {token}\"")
+        lines.append("    request_kwargs = {\"params\": params, \"headers\": headers}")
+        lines.append("    if has_body:")
+        lines.append("        if body is not None:")
+        lines.append("            request_kwargs[\"json\"] = body")
         lines.append("    async with httpx.AsyncClient(timeout=20) as client:")
-        lines.append("        resp = await client.get(url, params=params, headers=headers)")
+        lines.append("        resp = await client.request(method, url, **request_kwargs)")
         lines.append("        return {")
         lines.append("            \"status_code\": resp.status_code,")
         lines.append("            \"headers\": dict(resp.headers),")
@@ -122,32 +129,40 @@ def load_openapi() -> Tuple[bool, List[str]]:
             "Any": Any,
             "os": os,
             "load_runtime_config": load_runtime_config,
+            "has_body": has_body,
         }
         code = "\n".join(lines)
         exec(code, namespace)
         handler = namespace["handler"]
-        decorated = mcp.tool(name=name)(handler)
+        decorated = mcp.tool(name=name, description=description or "")(handler)
         _ = decorated
         tools_added.append(name)
 
     for path_template, path_item in paths.items():
         if not isinstance(path_item, dict):
             continue
-        op = path_item.get("get")
-        if not isinstance(op, dict):
-            continue
-        operation_id = op.get("operationId")
-        if not isinstance(operation_id, str) or not operation_id:
-            continue
-        params = op.get("parameters", [])
-        param_names: List[str] = []
-        if isinstance(params, list):
-            for p in params:
-                if isinstance(p, dict):
-                    name = p.get("name")
-                    if isinstance(name, str) and name:
-                        param_names.append(name)
-        register_openapi_tool(operation_id, path_template, param_names)
+        for method, op in path_item.items():
+            if method.lower() not in {"get", "post", "delete", "put", "patch"}:
+                continue
+            if not isinstance(op, dict):
+                continue
+            operation_id = op.get("operationId")
+            if not isinstance(operation_id, str) or not operation_id:
+                continue
+            params = op.get("parameters", [])
+            param_names: List[str] = []
+            if isinstance(params, list):
+                for p in params:
+                    if isinstance(p, dict):
+                        name = p.get("name")
+                        if isinstance(name, str) and name:
+                            param_names.append(name)
+            request_body = op.get("requestBody") if isinstance(op, dict) else None
+            has_body = bool(request_body) and method.lower() in {"post", "put", "patch", "delete"}
+            summary = op.get("summary") if isinstance(op, dict) else None
+            desc = op.get("description") if isinstance(op, dict) else None
+            description = desc or summary or ""
+            register_openapi_tool(operation_id, path_template, method, param_names, has_body, description)
     return True, tools_added
 
 try:

@@ -10,21 +10,13 @@ export default function StatusBar({
   hostUrl,
   connected,
   onHostUrlChange,
-  onReconnect,
-  apiConfig,
-  onApiConfigChange,
-  onSaveApiConfig,
-  isSavingConfig
+  onReconnect
 }: {
   status: Status
   hostUrl: string
   connected: boolean
   onHostUrlChange: (value: string) => void
   onReconnect: () => void
-  apiConfig: { apiBaseUrl: string; bearerToken: string }
-  onApiConfigChange: (value: Partial<{ apiBaseUrl: string; bearerToken: string }>) => void
-  onSaveApiConfig: () => void
-  isSavingConfig: boolean
 }) {
   return (
     <div className="w-full border-b border-slate-200 bg-white">
@@ -51,36 +43,16 @@ export default function StatusBar({
             <div>Tools: {status.toolsCount}</div>
           </div>
         </div>
-        <div className="flex flex-col gap-3 sm:w-[360px]">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <input
-              className="input sm:w-72"
-              value={hostUrl}
-              onChange={(e) => onHostUrlChange(e.target.value)}
-              placeholder="Host URL"
-            />
-            <button className="btn-primary" onClick={onReconnect}>
-              {connected ? "Reconnect" : "Connect"}
-            </button>
-          </div>
-          <div className="grid grid-cols-1 gap-2">
-            <input
-              className="input"
-              value={apiConfig.apiBaseUrl}
-              onChange={(e) => onApiConfigChange({ apiBaseUrl: e.target.value })}
-              placeholder="API Base URL"
-            />
-            <input
-              className="input"
-              type="password"
-              value={apiConfig.bearerToken}
-              onChange={(e) => onApiConfigChange({ bearerToken: e.target.value })}
-              placeholder="Bearer Token"
-            />
-            <button className="btn-primary" onClick={onSaveApiConfig} disabled={isSavingConfig}>
-              {isSavingConfig ? "Saving..." : "Save API Config"}
-            </button>
-          </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <input
+            className="input sm:w-72"
+            value={hostUrl}
+            onChange={(e) => onHostUrlChange(e.target.value)}
+            placeholder="Host URL"
+          />
+          <button className="btn-primary" onClick={onReconnect}>
+            {connected ? "Reconnect" : "Connect"}
+          </button>
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@
 import json
 import asyncio
 import re
+from pathlib import Path
 from typing import Any, Dict, List
 import httpx
 
@@ -10,12 +11,36 @@ class GeminiClient:
         self.api_key = os.getenv("GEMINI_API_KEY", "")
         self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
         self.context_window = int(os.getenv("AGENT_CONTEXT_WINDOW_SIZE", "6000"))
+        self.preprompt_path = Path(os.getenv("PREPROMPT_PATH", Path(__file__).with_name("preprompt.json")))
+        self.config_path = Path(os.getenv("API_CONFIG_PATH", Path(__file__).resolve().parents[2] / "data" / "api_config.json"))
+
+    def _load_runtime_config(self) -> Dict[str, str]:
+        if not self.config_path.exists():
+            return {"geminiApiKey": "", "geminiModel": ""}
+        try:
+            data = json.loads(self.config_path.read_text(encoding="utf-8-sig"))
+            if not isinstance(data, dict):
+                return {"geminiApiKey": "", "geminiModel": ""}
+            return {
+                "geminiApiKey": str(data.get("geminiApiKey") or ""),
+                "geminiModel": str(data.get("geminiModel") or ""),
+            }
+        except Exception:
+            return {"geminiApiKey": "", "geminiModel": ""}
 
     def is_configured(self) -> bool:
-        return bool(self.api_key)
+        cfg = self._load_runtime_config()
+        return bool(cfg.get("geminiApiKey") or self.api_key)
+
+    def current_model(self) -> str:
+        cfg = self._load_runtime_config()
+        return cfg.get("geminiModel") or self.model_name
 
     async def decide(self, conversation: List[Dict[str, Any]], tools: List[Dict[str, Any]], user_message: str, file_uris: List[str]) -> Dict[str, Any]:
-        if not self.api_key:
+        cfg = self._load_runtime_config()
+        api_key = cfg.get("geminiApiKey") or self.api_key
+        model_name = cfg.get("geminiModel") or self.model_name
+        if not api_key:
             return {"type": "final", "message": "Gemini API key is not configured"}
         system_prompt = self.build_system_prompt(tools, file_uris)
         payload = {
@@ -26,7 +51,7 @@ class GeminiClient:
             "generationConfig": {"temperature": 0.2, "response_mime_type": "application/json"},
         }
         headers = {"Content-Type": "application/json"}
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent?key={self.api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
         for attempt in range(3):
             try:
                 async with httpx.AsyncClient(timeout=25) as client:
@@ -49,31 +74,56 @@ class GeminiClient:
             for p in [p for p in extra.split(sep) if p]:
                 allowed_dirs.append(os.path.abspath(p))
         allowed_json = json.dumps(allowed_dirs)
-        return (
-            "You are a tool-using agent for RapidMCP. Your job is to plan, use tools, verify results, and iterate until the task is fully done. "
-            "You must use tools to read or change filesystem state and to call APIs. Never claim you deleted or wrote something unless a tool confirms it. "
-            f"Allowed directories for fs tools: {allowed_json}. "
-            "Only create, write, or delete files inside allowed directories and report the exact paths used. "
-            "Use fs.* tools for reading, writing, listing, and managing files. "
-            "Filesystem rules: "
-            "If the user asks to list files, call fs.list_directory on the relevant path (never use fs.list_allowed_directories for listing files). "
-            "If the user asks to delete files in a folder: first call fs.list_directory, then delete each listed file with fs.delete_file (or the appropriate delete tool), then call fs.list_directory again to verify. "
-            "If the user provides an explicit list of file paths or names to delete, delete exactly those (no re-list required), then verify by listing the directory. "
-            "If the user asks to write output to files, you must call an fs.* write tool for each file and then confirm the paths. "
-            "When asked to write API output to a file, call the relevant api.* tool first, then call fs.write_file with the full tool output (not a summary). "
-            "Use the exact filename the user provided; if none is provided, ask a clarifying question before writing. "
-            "Be professional and follow user instructions exactly. Do not rename files or change filenames unless explicitly requested. "
-            "Do not repeat directory listings in the final message unless it is part of verification. "
-            "API rules: use api.* tools for API operations. "
-            "Iteration rule: you may need multiple tool calls, return one tool call per response and continue after receiving the tool result until the task is complete. "
-            "Attached file URIs are provided. "
-            "Output must be a single JSON object matching the decision schema. "
-            "Decision schema: {\\\"type\\\":\\\"final\\\",\\\"message\\\":string} "
-            "or {\\\"type\\\":\\\"tool\\\",\\\"name\\\":string,\\\"arguments\\\":object}. "
-            f"Context window size (characters): {self.context_window}. The full window is provided; decide what is relevant. "
-            f"Available tools: {tools_json}. "
-            f"File URIs: {file_json}."
-        )
+
+        template = self._load_preprompt_template()
+        if not template:
+            return (
+                "You are a tool-using agent for RapidMCP. "
+                f"Available tools: {tools_json}. "
+                f"File URIs: {file_json}. "
+                f"Allowed directories for fs tools: {allowed_json}. "
+                f"Context window size (characters): {self.context_window}."
+            )
+
+        variables = {
+            "{{tools_json}}": tools_json,
+            "{{file_json}}": file_json,
+            "{{allowed_dirs}}": allowed_json,
+            "{{context_window}}": str(self.context_window),
+        }
+        return self._render_template(template, variables)
+
+    def _load_preprompt_template(self) -> Dict[str, Any]:
+        try:
+            if self.preprompt_path.exists():
+                return json.loads(self.preprompt_path.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+        return {}
+
+    def _render_template(self, template: Dict[str, Any], variables: Dict[str, str]) -> str:
+        header = template.get("header", "").strip()
+        sections = template.get("sections", [])
+        blocks: List[str] = []
+        if header:
+            blocks.append(header)
+        if isinstance(sections, list):
+            for section in sections:
+                if not isinstance(section, dict):
+                    continue
+                title = str(section.get("title", "")).strip()
+                lines = section.get("lines", [])
+                if title:
+                    blocks.append(f"\n## {title}")
+                if isinstance(lines, list):
+                    for line in lines:
+                        if not isinstance(line, str):
+                            continue
+                        blocks.append(line)
+        text = "\n".join(blocks)
+        for key, value in variables.items():
+            text = text.replace(key, value)
+        return text
 
     def build_context(self, conversation: List[Dict[str, Any]], user_message: str) -> str:
         messages = list(conversation)
@@ -102,13 +152,33 @@ class GeminiClient:
         text = text.strip()
         if text.startswith("{") and text.endswith("}"):
             try:
-                return json.loads(text)
+                data = json.loads(text)
+                if isinstance(data, dict):
+                    if data.get("type") in ("tool", "final"):
+                        return data
+                    if "tool" in data and isinstance(data.get("tool"), str):
+                        return {"type": "tool", "name": data.get("tool"), "arguments": data.get("arguments") or {}}
+                    if "name" in data and "arguments" in data and isinstance(data.get("name"), str):
+                        return {"type": "tool", "name": data.get("name"), "arguments": data.get("arguments") or {}}
+                    if "message" in data and isinstance(data.get("message"), str):
+                        return {"type": "final", "message": data.get("message")}
+                return data
             except Exception:
                 pass
         match = re.search(r"\{.*\}", text, re.DOTALL)
         if match:
             try:
-                return json.loads(match.group(0))
+                data = json.loads(match.group(0))
+                if isinstance(data, dict):
+                    if data.get("type") in ("tool", "final"):
+                        return data
+                    if "tool" in data and isinstance(data.get("tool"), str):
+                        return {"type": "tool", "name": data.get("tool"), "arguments": data.get("arguments") or {}}
+                    if "name" in data and "arguments" in data and isinstance(data.get("name"), str):
+                        return {"type": "tool", "name": data.get("name"), "arguments": data.get("arguments") or {}}
+                    if "message" in data and isinstance(data.get("message"), str):
+                        return {"type": "final", "message": data.get("message")}
+                return data
             except Exception:
                 pass
         return {"type": "final", "message": text}
