@@ -45,6 +45,8 @@
         "If the user says 'upload' or 'uploaded' without qualifiers, assume they want to use the API to create/upload a base asset (not just list local files).",
         "When creating or uploading a model without a specified name, choose a short, descriptive name based on the source file (e.g., 'crate' from crate.glb) and state it.",
         "When asked to upload groups like 'all characters' or 'all monsters', infer from filenames using simple semantics (e.g., humanoid names like knight/soldier are characters; creature names like dragon/ogre are monsters; inanimate objects like crate/gravestone are neither). If unsure, ask one clarifying question.",
+        "When the user asks about presets, always call the presets list tool and summarize the results instead of guessing. If the user describes a goal (e.g., reduce vertices, compress textures, AR, VR, mobile), filter presets by keyword overlap and suggest one or two closest matches.",
+        "If the user says to 'use any' preset for a goal, pick the most generic match for that goal and proceed without further questions.",
         "Never claim you deleted or wrote something unless a tool confirms it.",
         "Summarize tool results in clear, human-friendly language.",
         "Do not dump raw JSON in the final response unless the user explicitly asks for it.",

@@ -540,3 +540,18 @@ NameError: name 'is_allowed_path' is not defined
 2026-02-05 15:12:17,965 WARNING host-service.fs-mcp - npx launch failed, retrying with npx.cmd
 2026-02-05 15:12:17,972 INFO host-service - Startup complete
 2026-02-05 15:12:19,233 WARNING host-service.fs-mcp - fs MCP stderr: Secure MCP Filesystem Server running on stdio
+2026-02-05 15:19:28,814 INFO host-service - HOST_PORT=8080 MCP_API_URL=http://localhost:8000/mcp/ FS_MCP_ENABLED=True FILE_STORE_DIR=D:\Projects\RapidMCP\.\data
+2026-02-05 15:19:28,837 INFO host-service.fs-mcp - Starting fs MCP: npx -y @modelcontextprotocol/server-filesystem D:\Projects\RapidMCP\data D:\Projects\RapidMCP\data
+2026-02-05 15:19:28,841 WARNING host-service.fs-mcp - npx launch failed, retrying with npx.cmd
+2026-02-05 15:19:28,846 INFO host-service - Startup complete
+2026-02-05 15:19:30,051 WARNING host-service.fs-mcp - fs MCP stderr: Secure MCP Filesystem Server running on stdio
+2026-02-05 15:26:55,027 INFO host-service - HOST_PORT=8080 MCP_API_URL=http://localhost:8000/mcp/ FS_MCP_ENABLED=True FILE_STORE_DIR=D:\Projects\RapidMCP\.\data
+2026-02-05 15:26:55,050 INFO host-service.fs-mcp - Starting fs MCP: npx -y @modelcontextprotocol/server-filesystem D:\Projects\RapidMCP\data D:\Projects\RapidMCP\data
+2026-02-05 15:26:55,053 WARNING host-service.fs-mcp - npx launch failed, retrying with npx.cmd
+2026-02-05 15:26:55,060 INFO host-service - Startup complete
+2026-02-05 15:26:56,222 WARNING host-service.fs-mcp - fs MCP stderr: Secure MCP Filesystem Server running on stdio
+2026-02-05 15:33:16,795 INFO host-service - HOST_PORT=8080 MCP_API_URL=http://localhost:8000/mcp/ FS_MCP_ENABLED=True FILE_STORE_DIR=D:\Projects\RapidMCP\.\data
+2026-02-05 15:33:16,824 INFO host-service.fs-mcp - Starting fs MCP: npx -y @modelcontextprotocol/server-filesystem D:\Projects\RapidMCP\data D:\Projects\RapidMCP\data
+2026-02-05 15:33:16,828 WARNING host-service.fs-mcp - npx launch failed, retrying with npx.cmd
+2026-02-05 15:33:16,836 INFO host-service - Startup complete
+2026-02-05 15:33:18,143 WARNING host-service.fs-mcp - fs MCP stderr: Secure MCP Filesystem Server running on stdio

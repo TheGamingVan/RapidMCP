@@ -206,6 +206,7 @@ paths:
                   id:
                     type: integer
                     example: 281
+                    nullable: true
                   name:
                     type: string
                     example: teapot.obj
@@ -218,6 +219,7 @@ paths:
                       id:
                         type: integer
                         example: 518
+                        nullable: true
                       job_id:
                         type: string
                         example: null
@@ -232,12 +234,15 @@ paths:
                       attempts:
                         type: integer
                         example: 0
+                        nullable: true
                       progress_now:
                         type: integer
                         example: 0
+                        nullable: true
                       progress_max:
                         type: integer
                         example: 0
+                        nullable: true
                       status:
                         type: string
                         example: queued
@@ -269,6 +274,7 @@ paths:
                   progress:
                     type: integer
                     example: 0
+                    nullable: true
                   processing_step:
                     type: string
                     example: Scheduled for processing
@@ -282,6 +288,7 @@ paths:
                       id:
                         type: integer
                         example: 282
+                        nullable: true
                       name:
                         type: string
                         example: teapot.obj
