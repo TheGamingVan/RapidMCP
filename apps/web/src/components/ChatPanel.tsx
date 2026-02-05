@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { ChatMessage } from "@/lib/types"
 
 export default function ChatPanel({
@@ -13,6 +13,21 @@ export default function ChatPanel({
   onSend: (text: string) => void
 }) {
   const [input, setInput] = useState("")
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  const inputRef = useRef<HTMLTextAreaElement | null>(null)
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight
+    })
+  }, [messages, draftAssistant])
+
+  useEffect(() => {
+    if (isProcessing) return
+    inputRef.current?.focus()
+  }, [isProcessing])
 
   const handleSubmit = () => {
     if (!input.trim() || isProcessing) return
@@ -28,19 +43,19 @@ export default function ChatPanel({
   }
 
   return (
-    <div className="panel p-4 flex flex-col h-full min-h-0">
+    <div className="panel p-4 flex flex-col h-full min-h-0 min-w-0">
       <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Chat</div>
-      <div className="mt-4 space-y-4 flex-1 overflow-auto pr-2 min-h-0">
+      <div ref={scrollRef} className="mt-4 space-y-4 flex-1 overflow-y-auto overflow-x-auto pr-2 min-h-0 min-w-0">
         {messages.map((m) => (
-          <div key={m.id} className={`rounded-2xl px-4 py-3 ${m.role === "user" ? "bg-slate-50 border border-slate-200" : "bg-white border border-slate-200"}`}>
+          <div key={m.id} className={`rounded-2xl px-4 py-3 max-w-full min-w-0 ${m.role === "user" ? "bg-slate-50 border border-slate-200" : "bg-white border border-slate-200"}`}>
             <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">{m.role}</div>
-            <div className="mt-2 text-sm text-slate-700 whitespace-pre-wrap">{m.content}</div>
+            <div className="mt-2 text-sm text-slate-700 whitespace-pre-wrap overflow-x-auto">{m.content}</div>
           </div>
         ))}
         {draftAssistant && (
-          <div className="rounded-2xl px-4 py-3 bg-white border border-dashed border-slate-300">
+          <div className="rounded-2xl px-4 py-3 bg-white border border-dashed border-slate-300 max-w-full min-w-0">
             <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">assistant</div>
-            <div className="mt-2 text-sm text-slate-700 whitespace-pre-wrap">{draftAssistant}</div>
+            <div className="mt-2 text-sm text-slate-700 whitespace-pre-wrap overflow-x-auto">{draftAssistant}</div>
           </div>
         )}
       </div>
@@ -52,6 +67,7 @@ export default function ChatPanel({
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={isProcessing}
+          ref={inputRef}
         />
         <button
           className="btn-primary disabled:opacity-60 disabled:cursor-not-allowed"

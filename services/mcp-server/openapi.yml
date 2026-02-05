@@ -1,36 +1,61 @@
-﻿openapi: 3.0.3
+openapi: 3.0.3
 info:
-  title: 'RapidPipeline API v2 Documentation'
-  description: ''
+  title: RapidPipeline API v2 Documentation
+  description: All endpoints return JSON unless explicitly documented otherwise. Optional
+    query parameters may be omitted to list all results. Use bearer token
+    authentication unless noted.
   version: 1.0.0
 servers:
-  -
-    url: 'https://api.rapidpipeline.com'
+- url: https://api.rapidpipeline.com
 paths:
   /api/v2/user/tokens:
     get:
-      summary: 'Get Tokens'
+      summary: Get Tokens
       operationId: getTokens
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-                example: "[\n\t{\n\t\t\"id\": 222,\n\t\t\"name\": \"name of api token\",\n\t\t\"last_used_at\": \"2021-09-01T11:21:22.000000Z\",\n\t\t\"created_at\": \"2021-09-01T10:26:57.000000Z\",\n\t\t\"optimization_count\": 42,\n\t}\n]"
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+                  properties:
+                    id:
+                      type: integer
+                      example: 222
+                    name:
+                      type: string
+                      example: name of api token
+                    last_used_at:
+                      type: string
+                      example: '2021-09-01T11:21:22.000000Z'
+                    created_at:
+                      type: string
+                      example: '2021-09-01T10:26:57.000000Z'
+                    optimization_count:
+                      type: integer
+                      example: 42
+              example:
+              - id: 222
+                name: name of api token
+                last_used_at: '2021-09-01T11:21:22.000000Z'
+                created_at: '2021-09-01T10:26:57.000000Z'
+                optimization_count: 42
       tags:
-        - 'API Tokens'
+      - API Tokens
   /api/v2/user/tokens/create:
     post:
-      summary: 'Create Token'
+      summary: Create Token
       operationId: createToken
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             text/plain:
@@ -38,7 +63,7 @@ paths:
                 type: string
                 example: 234|y5NGBTJk5OX5Zva5RfxTz0GkXEL9axN79vTfsJOH
       tags:
-        - 'API Tokens'
+      - API Tokens
       requestBody:
         required: true
         content:
@@ -48,27 +73,27 @@ paths:
               properties:
                 name:
                   type: string
-                  description: 'The name of the API token'
-                  example: 'name of new api token'
+                  description: The name of the API token
+                  example: name of new api token
                   nullable: false
               required:
-                - name
-  '/api/v2/user/tokens/{id}':
+              - name
+  /api/v2/user/tokens/{id}:
     delete:
-      summary: 'Delete Token'
+      summary: Delete Token
       operationId: deleteToken
       description: ''
       parameters: []
-      responses: {  }
+      responses: {}
       tags:
-        - 'API Tokens'
+      - API Tokens
     get:
-      summary: 'Get Token'
+      summary: Get Token
       operationId: getToken
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             application/json:
@@ -78,9 +103,9 @@ paths:
                   id: 1
                   tokenable_type: App\Models\User
                   tokenable_id: 45
-                  name: 'name of api token'
+                  name: name of api token
                   abilities:
-                    - '*'
+                  - '*'
                   last_used_at: null
                   created_at: '2021-10-26T10:38:07.000000Z'
                   updated_at: '2021-10-26T10:38:07.000000Z'
@@ -97,16 +122,17 @@ paths:
                     example: 45
                   name:
                     type: string
-                    example: 'name of api token'
+                    example: name of api token
                   abilities:
                     type: array
                     example:
-                      - '*'
+                    - '*'
                     items:
                       type: string
                   last_used_at:
                     type: string
                     example: null
+                    nullable: true
                   created_at:
                     type: string
                     example: '2021-10-26T10:38:07.000000Z'
@@ -117,24 +143,33 @@ paths:
                     type: string
                     example: ''
       tags:
-        - 'API Tokens'
+      - API Tokens
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the API token'
-        example: 42
-        required: true
-        schema:
-          type: integer
-  '/api/v2/rawmodel/optimize/{id}':
+    - in: path
+      name: id
+      description: The id of the API token
+      example: 42
+      required: true
+      schema:
+        type: integer
+  /api/v2/rawmodel/optimize/{id}:
     post:
       summary: Optimize
       operationId: optimize
-      description: "There are two ways to optimize a base asset:\n\nIn the first way send a config as a json object that complies with the [3D Processor Schema](https://docs.rapidpipeline.com/docs/componentDocs/3dProcessingSchemaSettings/processor-schema-overview), or send the id of one of your presets or of a factoryPreset\n\nYou can use our \"optimization_finished\" webhook to get notified when your model has been optimized. It also includes downloadlinks to your optimized model"
+      description: 'There are two ways to optimize a base asset:
+
+
+        In the first way send a config as a json object that complies with the [3D
+        Processor Schema](https://docs.rapidpipeline.com/docs/componentDocs/3dProcessingSchemaSettings/processor-schema-overview),
+        or send the id of one of your presets or of a factoryPreset
+
+
+        You can use our "optimization_finished" webhook to get notified when your
+        model has been optimized. It also includes downloadlinks to your optimized
+        model'
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             application/json:
@@ -159,9 +194,9 @@ paths:
                     updated_at: '2021-02-15T13:34:52.000000Z'
                     started_at: null
                     finished_at: null
-                    key: 'rapid_model:624'
+                    key: rapid_model:624
                   progress: 0
-                  processing_step: 'Scheduled for processing'
+                  processing_step: Scheduled for processing
                   external: null
                   rawmodel:
                     id: 282
@@ -186,12 +221,14 @@ paths:
                       job_id:
                         type: string
                         example: null
+                        nullable: true
                       type:
                         type: string
                         example: App\Jobs\ProcessRawModel
                       queue:
                         type: string
                         example: null
+                        nullable: true
                       attempts:
                         type: integer
                         example: 0
@@ -207,9 +244,11 @@ paths:
                       input:
                         type: string
                         example: null
+                        nullable: true
                       output:
                         type: string
                         example: null
+                        nullable: true
                       created_at:
                         type: string
                         example: '2021-02-15T13:34:52.000000Z'
@@ -219,21 +258,24 @@ paths:
                       started_at:
                         type: string
                         example: null
+                        nullable: true
                       finished_at:
                         type: string
                         example: null
+                        nullable: true
                       key:
                         type: string
-                        example: 'rapid_model:624'
+                        example: rapid_model:624
                   progress:
                     type: integer
                     example: 0
                   processing_step:
                     type: string
-                    example: 'Scheduled for processing'
+                    example: Scheduled for processing
                   external:
                     type: string
                     example: null
+                    nullable: true
                   rawmodel:
                     type: object
                     properties:
@@ -247,7 +289,7 @@ paths:
                         type: boolean
                         example: true
       tags:
-        - 'Base Asset'
+      - Base Asset
       requestBody:
         required: false
         content:
@@ -257,7 +299,10 @@ paths:
               properties:
                 config:
                   type: object
-                  description: 'The config of the optimizer as a json object complying with the [3D Processor Schema](https://docs.rapidpipeline.com/docs/componentDocs/3dProcessingSchemaSettings/processor-schema-overview). Do not use config in combination with preset_id. They are mutually exclusive'
+                  description: The config of the optimizer as a json object complying
+                    with the [3D Processor Schema](https://docs.rapidpipeline.com/docs/componentDocs/3dProcessingSchemaSettings/processor-schema-overview).
+                    Do not use config in combination with preset_id. They are mutually
+                    exclusive
                   example:
                     import:
                       general:
@@ -276,54 +321,67 @@ paths:
                         morphTargets: false
                         unusedUVs: false
                     export:
-                      -
-                        fileName: ''
-                        textureMapFilePrefix: ''
-                        discard: []
-                        format:
-                          gltf:
-                            pbrMaterial: []
+                    - fileName: ''
+                      textureMapFilePrefix: ''
+                      discard: []
+                      format:
+                        gltf:
+                          pbrMaterial: []
                   nullable: false
-                  properties: {  }
+                  properties: {}
                 preset_id:
                   type: integer
-                  description: 'The id one of your presets or of a factoryPreset. Do not use preset_id in combination with config. They are mutually exclusive'
+                  description: The id one of your presets or of a factoryPreset. Do
+                    not use preset_id in combination with config. They are mutually
+                    exclusive
                   example: null
-                  nullable: false
+                  nullable: true
                 tags:
                   type: array
-                  description: 'A list of tags that will be added to the rapid model'
+                  description: A list of tags that will be added to the rapid model
                   example:
-                    - Low-Poly
-                    - MyTag
+                  - Low-Poly
+                  - MyTag
                   items:
                     type: string
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the base asset'
-        example: 281
-        required: true
-        schema:
-          type: integer
+    - in: path
+      name: id
+      description: The id of the base asset
+      example: 281
+      required: true
+      schema:
+        type: integer
   /api/v2/rawmodel/optimize:
     post:
-      summary: 'Multi Optimize'
+      summary: Multi Optimize
       operationId: multiOptimize
-      description: "Optimizes multiple models with one request\n\nUse the same format as in the optimization endpoint but pass it in an array which contains the request as config (preset_id or config as json object) and the model_id of the base assets you want to process\n\nLook at the example request for the data structure\n\nYou can use our \"optimization_finished\" webhook to get notified when your model has been optimized. It also includes download links to your optimized model"
+      description: 'Optimizes multiple models with one request
+
+
+        Use the same format as in the optimization endpoint but pass it in an array
+        which contains the request as config (preset_id or config as json object)
+        and the model_id of the base assets you want to process
+
+
+        Look at the example request for the data structure
+
+
+        You can use our "optimization_finished" webhook to get notified when your
+        model has been optimized. It also includes download links to your optimized
+        model'
       parameters: []
       responses:
-        204:
+        '204':
           description: success
-        422:
+        '422':
           description: error
           content:
             text/plain:
               schema:
                 type: string
                 example: 'Could not process request: Missing required parameter'
-        500:
+        '500':
           description: error
           content:
             text/plain:
@@ -331,7 +389,7 @@ paths:
                 type: string
                 example: 'An error occurred while processing your request: ...'
       tags:
-        - 'Base Asset'
+      - Base Asset
       requestBody:
         required: true
         content:
@@ -341,38 +399,38 @@ paths:
               properties:
                 optimizations:
                   type: array
-                  description: 'The array containing the models and configurations you want to process'
+                  description: The array containing the models and configurations
+                    you want to process
                   example:
-                    -
-                      model_id: 89
-                      config:
-                        preset_id: 2004
-                        tags:
-                          - 'Lens Studio 3D'
-                          - 'Medium Resolution'
-                          - Low-Poly
-                        exportName: calibrationTarget.glb
-                    -
-                      model_id: 77
-                      config:
-                        preset_id: 2004
-                        tags:
-                          - 'Lens Studio 3D'
-                          - 'Medium Resolution'
-                          - Mid-Poly
-                        exportName: DamagedHelmet.glb
+                  - model_id: 89
+                    config:
+                      preset_id: 2004
+                      tags:
+                      - Lens Studio 3D
+                      - Medium Resolution
+                      - Low-Poly
+                      exportName: calibrationTarget.glb
+                  - model_id: 77
+                    config:
+                      preset_id: 2004
+                      tags:
+                      - Lens Studio 3D
+                      - Medium Resolution
+                      - Mid-Poly
+                      exportName: DamagedHelmet.glb
                   items:
                     type: string
               required:
-                - optimizations
+              - optimizations
   /api/v2/rawmodel/jobs:
     get:
-      summary: 'Get Running Jobs'
+      summary: Get Running Jobs
       operationId: getRunningJobs
-      description: 'Returns rapidmodels (until 1 week) that are still being processed or were not successfully optimized'
+      description: Returns rapidmodels (until 1 week) that are still being processed
+        or were not successfully optimized
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             application/json:
@@ -380,8 +438,36 @@ paths:
                 type: object
                 example:
                   data:
-                    -
-                      id: 5812
+                  - id: 5812
+                    name: TVBench
+                    optimization_status: failed
+                    job_status:
+                      id: 3601
+                      job_id: edab51b2-1c47-4a0f-b807-58e913dbabc9
+                      type: App\Jobs\ProcessRawModel
+                      queue: default
+                      attempts: 1
+                      progress_now: 100
+                      progress_max: 100
+                      status: finished
+                      input: null
+                      output: '{"exit_code":1}'
+                      created_at: '2021-10-11 20:08:52'
+                      updated_at: '2021-10-11 20:08:53'
+                      started_at: '2021-10-11 20:08:52'
+                      finished_at: '2021-10-11 20:08:53'
+                      key: rapid_model:5812
+                    progress: 100
+                    processing_step: Done
+                    external: false
+                    rawmodel:
+                      id: 2257
+                      name: TVBench
+                properties:
+                  data:
+                    type: array
+                    example:
+                    - id: 5812
                       name: TVBench
                       optimization_status: failed
                       job_status:
@@ -399,45 +485,16 @@ paths:
                         updated_at: '2021-10-11 20:08:53'
                         started_at: '2021-10-11 20:08:52'
                         finished_at: '2021-10-11 20:08:53'
-                        key: 'rapid_model:5812'
+                        key: rapid_model:5812
                       progress: 100
                       processing_step: Done
                       external: false
                       rawmodel:
                         id: 2257
                         name: TVBench
-                properties:
-                  data:
-                    type: array
-                    example:
-                      -
-                        id: 5812
-                        name: TVBench
-                        optimization_status: failed
-                        job_status:
-                          id: 3601
-                          job_id: edab51b2-1c47-4a0f-b807-58e913dbabc9
-                          type: App\Jobs\ProcessRawModel
-                          queue: default
-                          attempts: 1
-                          progress_now: 100
-                          progress_max: 100
-                          status: finished
-                          input: null
-                          output: '{"exit_code":1}'
-                          created_at: '2021-10-11 20:08:52'
-                          updated_at: '2021-10-11 20:08:53'
-                          started_at: '2021-10-11 20:08:52'
-                          finished_at: '2021-10-11 20:08:53'
-                          key: 'rapid_model:5812'
-                        progress: 100
-                        processing_step: Done
-                        external: false
-                        rawmodel:
-                          id: 2257
-                          name: TVBench
                     items:
                       type: object
+                      additionalProperties: true
                       properties:
                         id:
                           type: integer
@@ -478,6 +535,7 @@ paths:
                             input:
                               type: string
                               example: null
+                              nullable: true
                             output:
                               type: string
                               example: '{"exit_code":1}'
@@ -495,7 +553,7 @@ paths:
                               example: '2021-10-11 20:08:53'
                             key:
                               type: string
-                              example: 'rapid_model:5812'
+                              example: rapid_model:5812
                         progress:
                           type: integer
                           example: 100
@@ -515,45 +573,81 @@ paths:
                               type: string
                               example: TVBench
       tags:
-        - 'Base Asset'
-  '/api/v2/rawmodel/{id}':
+      - Base Asset
+  /api/v2/rawmodel/{id}:
     get:
-      summary: 'Get Base Asset'
+      summary: Get Base Asset
       operationId: getBaseAsset
-      description: "Returns detailed information about an uploaded 3D model asset, including its processing status,\nmetadata, and available downloads. Use this endpoint to monitor upload status or use our webhook\nto get notified when the upload is complete.\n\nKey Field `upload_status`\n\nThe `upload_status` field tracks the model's progress through various processing stages.\n\nMost important values are:\n- \"complete\": All processing completed successfully\n- \"Importing Failed\": General processing failure\n\nOther values are:\n- \"incomplete\": Initial state, upload not yet finished\n- \"waiting\": Upload complete, waiting to start processing\n- \"unzipping\": Extracting uploaded files\n- \"analysing\": Analyzing model structure and contents\n- \"dataprepping\": Preparing data for processing\n- \"dataprepping failed\": Data preparation encountered an error\n- \"RapidQC\": Model is in quality control phase\n- \"Importing Failed Import Limit Exceeded\": Processing failed due to import limits\n\nError Handling:\n1. Check `upload_status` first:\n   - \"complete\" indicates successful processing\n\n2. If `has_errors` is true:\n   - Set to true if RapidPipeline 3D Processor creates a error.log file with errors\n   - Check \"error.log\" in the downloads section for details"
-      parameters: [id]
+      description: "Returns detailed information about an uploaded 3D model asset,\
+        \ including its processing status,\nmetadata, and available downloads. Use\
+        \ this endpoint to monitor upload status or use our webhook\nto get notified\
+        \ when the upload is complete.\n\nKey Field `upload_status`\n\nThe `upload_status`\
+        \ field tracks the model's progress through various processing stages.\n\n\
+        Most important values are:\n- \"complete\": All processing completed successfully\n\
+        - \"Importing Failed\": General processing failure\n\nOther values are:\n\
+        - \"incomplete\": Initial state, upload not yet finished\n- \"waiting\": Upload\
+        \ complete, waiting to start processing\n- \"unzipping\": Extracting uploaded\
+        \ files\n- \"analysing\": Analyzing model structure and contents\n- \"dataprepping\"\
+        : Preparing data for processing\n- \"dataprepping failed\": Data preparation\
+        \ encountered an error\n- \"RapidQC\": Model is in quality control phase\n\
+        - \"Importing Failed Import Limit Exceeded\": Processing failed due to import\
+        \ limits\n\nError Handling:\n1. Check `upload_status` first:\n   - \"complete\"\
+        \ indicates successful processing\n\n2. If `has_errors` is true:\n   - Set\
+        \ to true if RapidPipeline 3D Processor creates a error.log file with errors\n\
+        \   - Check \"error.log\" in the downloads section for details"
+      parameters: []
       responses:
-        200:
+        '200':
           description: ''
           content:
-            text/plain:
+            application/json:
               schema:
-                oneOf:
-                  -
-                    description: ''
-                    type: string
-                    example: "{\n   \"data\": {\n       \"id\": 281,\n       \"uuid\": \"123e4567-e89b-12d3-a456-426614174000\",\n       \"name\": \"teapot\",\n       \"external\": false,\n       \"upload_status\": \"complete\",  // most important field to check for the upload/processing status\n       \"import_status\": null,\n       \"progress\": null,\n       \"error_message\": null,\n       \"size\": 438680,\n       \"created_at\": \"2021-02-08T16:59:52+01:00\",\n       \"scale_factor\": \"10\",\n       \"has_errors\": false,  // true if RapidPipeline 3D Processor creates a error.log file with errors\n       \"format\": \"glb\",\n       \"tags\": [\n             {\n             \"id\": 241,\n             \"name\": \"Mid-Poly\",\n             \"created_at\": \"2022-12-12 13:12:37+00\",\n             \"updated_at\": \"2022-12-12 13:12:37+00\",\n             \"raw_id\": 281\n             }\n             ],\n       \"metadata\": null,\n       \"downloads\": {\n           \"error.log\": \"signed url for the error.log - Contains validation and processing errors\",\n           \"info.log\": \"signed url for info.log - Processing information\",\n           \"metrics.json\": \"signed url for the metrics.json - Model statistics and measurements\",\n           \"rpd_info.json\": \"signed url for the rpd_info.json\",\n           \"teapot.obj\": \"signed url for the teapot.obj - Original uploaded file\",\n           \"thumb.jpg\": \"signed url for the thumb.jpg - Thumbnail preview\"\n        }\n      \"converted_glb\": {\n           \"name\": \"teapot.glb\",\n           \"url\": \"signed url for the converted GLB file\",\n           \"human_name\": \"teapot.glb\"\n       },\n       \"converted_gltf\": {\n           \"name\": \"teapot.gltf.zip\",\n           \"url\": \"signed url for the converted GLTF file\",\n           \"human_name\": \"teapot.gltf\"\n       },\n       \"converted_max\": {\n           \"name\": \"teapot.max.zip\",\n           \"url\": \"signed url for the converted MAX file\",\n           \"human_name\": \"teapot.max\"\n       },\n       \"converted_fbx\": {\n           \"name\": \"teapot.fbx\",\n           \"url\": \"signed url for the converted FBX file\",\n           \"human_name\": \"teapot.fbx\"\n       },\n       \"converted_usdz\": {\n           \"name\": \"teapot.usdz\",\n           \"url\": \"signed url for the converted USDZ file\",\n           \"human_name\": \"teapot.usdz\"\n       }\n   }\n}"
-                  -
-                    description: Success
-                    type: string
-                    example: "{\n   \"data\": {\n       \"id\": 281,\n       \"upload_status\": \"complete\",\n       // ... other fields ...\n   }\n}"
-                  -
-                    description: Processing
-                    type: string
-                    example: "{\n   \"data\": {\n       \"id\": 281,\n       \"upload_status\": \"analysing\",\n       // ... other fields ...\n   }\n}"
-                  -
-                    description: Failed
-                    type: string
-                    example: "{\n   \"data\": {\n       \"id\": 281,\n       \"upload_status\": \"Importing Failed\",\n       // ... other fields ...\n   }\n}"
+                type: object
+                additionalProperties: false
+                properties:
+                  data:
+                    type: object
+                    additionalProperties: true
+                required:
+                - data
+              example:
+                data:
+                  id: 281
+                  uuid: 123e4567-e89b-12d3-a456-426614174000
+                  name: teapot
+                  external: false
+                  upload_status: complete
+                  import_status: null
+                  progress: null
+                  error_message: null
+                  size: 438680
+                  created_at: '2021-02-08T16:59:52+01:00'
+                  scale_factor: '10'
+                  has_errors: false
+                  format: glb
+                  tags:
+                  - id: 241
+                    name: Mid-Poly
+                    created_at: '2022-12-12 13:12:37+00'
+                    updated_at: '2022-12-12 13:12:37+00'
+                    raw_id: 281
+                  metadata: null
+                  downloads:
+                    error.log: signed url for the error.log
+                    info.log: signed url for the info.log
+                    metrics.json: signed url for the metrics.json
+                    rpd_info.json: signed url for the rpd_info.json
+                    teapot.obj: signed url for the teapot.obj
+                    thumb.jpg: signed url for the thumb.jpg
       tags:
-        - 'Base Asset'
+      - Base Asset
     delete:
-      summary: 'Delete Base Asset'
+      summary: Delete Base Asset
       operationId: deleteBaseAsset
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             text/plain:
@@ -561,15 +655,15 @@ paths:
                 type: string
                 example: ''
       tags:
-        - 'Base Asset'
+      - Base Asset
     put:
-      summary: 'Update Base Asset - Add Tags, Set scale factor'
+      summary: Update Base Asset - Add Tags, Set scale factor
       operationId: updateBaseAssetAddTagsSetScaleFactor
-      description: 'A tag can have 255 utf-8 characters including whitespaces'
+      description: A tag can have 255 utf-8 characters including whitespaces
       parameters: []
-      responses: {  }
+      responses: {}
       tags:
-        - 'Base Asset'
+      - Base Asset
       requestBody:
         required: false
         content:
@@ -579,167 +673,210 @@ paths:
               properties:
                 tags:
                   type: array
-                  description: 'A list of tags that will be added to the base asset'
+                  description: A list of tags that will be added to the base asset
                   example:
-                    - 'low poly'
-                    - 'mb target'
+                  - low poly
+                  - mb target
                   items:
                     type: string
                 scale_factor:
                   type: number
-                  description: 'The new scale factor that will be applied to the base asset'
+                  description: The new scale factor that will be applied to the base
+                    asset
                   example: 0.5
                   nullable: false
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the base asset'
-        example: 281
-        required: true
-        schema:
-          type: integer
-  '/api/v2/rawmodel/{id}/downloads':
+    - in: path
+      name: id
+      description: The id of the base asset
+      example: 281
+      required: true
+      schema:
+        type: integer
+  /api/v2/rawmodel/{id}/downloads:
     get:
-      summary: 'Get Download URLs'
+      summary: Get Download URLs
       operationId: getDownloadURLs
-      description: 'Returns a list of urls to download the individual base asset files'
+      description: Returns a list of urls to download the individual base asset files
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             application/json:
               schema:
                 type: object
                 example:
-                  RezColorChecker.mtl: 'signed s3 url'
-                  RezColorChecker.obj: 'signed s3 url'
-                  RezColorChecker.png: 'signed s3 url'
+                  RezColorChecker.mtl: signed s3 url
+                  RezColorChecker.obj: signed s3 url
+                  RezColorChecker.png: signed s3 url
                 properties:
                   RezColorChecker.mtl:
                     type: string
-                    example: 'signed s3 url'
+                    example: signed s3 url
                   RezColorChecker.obj:
                     type: string
-                    example: 'signed s3 url'
+                    example: signed s3 url
                   RezColorChecker.png:
                     type: string
-                    example: 'signed s3 url'
+                    example: signed s3 url
       tags:
-        - 'Base Asset'
+      - Base Asset
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the base asset'
-        example: 281
-        required: true
-        schema:
-          type: integer
-  '/api/v2/rawmodel/{id}/downloads/converted':
+    - in: path
+      name: id
+      description: The id of the base asset
+      example: 281
+      required: true
+      schema:
+        type: integer
+  /api/v2/rawmodel/{id}/downloads/converted:
     get:
-      summary: 'Get Download URLs for converted files.'
+      summary: Get Download URLs for converted files.
       operationId: getDownloadURLsForConvertedFiles
-      description: 'Returns a list of urls to download the individual converted formats'
+      description: Returns a list of urls to download the individual converted formats
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             application/json:
               schema:
                 type: object
                 example:
-                  RezColorChecker.usdz: 'signed s3 url'
-                  RezColorChecker.obj: 'signed s3 url'
-                  RezColorChecker.fbx: 'signed s3 url'
+                  RezColorChecker.usdz: signed s3 url
+                  RezColorChecker.obj: signed s3 url
+                  RezColorChecker.fbx: signed s3 url
                 properties:
                   RezColorChecker.usdz:
                     type: string
-                    example: 'signed s3 url'
+                    example: signed s3 url
                   RezColorChecker.obj:
                     type: string
-                    example: 'signed s3 url'
+                    example: signed s3 url
                   RezColorChecker.fbx:
                     type: string
-                    example: 'signed s3 url'
+                    example: signed s3 url
       tags:
-        - 'Base Asset'
+      - Base Asset
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the base asset'
-        example: 281
-        required: true
-        schema:
-          type: integer
-  '/api/v2/rawmodel/{id}/downloads/pbr':
+    - in: path
+      name: id
+      description: The id of the base asset
+      example: 281
+      required: true
+      schema:
+        type: integer
+  /api/v2/rawmodel/{id}/downloads/pbr:
     get:
-      summary: 'Get imported DCC files'
+      summary: Get imported DCC files
       operationId: getImportedDCCFiles
-      description: 'Returns a list of urls to download the individual converted DCC material and quality control files'
+      description: Returns a list of urls to download the individual converted DCC
+        material and quality control files
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-                example: "{\n \"materials\" : {\n    \"ao.png\":\"signed s3 url\",\n    \"diffuse.png\":\"signed s3 url\",\n  },\n  \"qc\": {\n    \"render_0.png\":\"signed s3 url\",\n    \"render_1.png\":\"signed s3 url\",\n    \"diff_0.png\":\"signed s3 url\",\n    \"diff_1.png\":\"signed s3 url\",\n  }\n}"
+                type: object
+                additionalProperties: true
+                properties:
+                  materials:
+                    type: object
+                    additionalProperties: true
+                  qc:
+                    type: object
+                    additionalProperties: true
+              example:
+                materials:
+                  ao.png: signed s3 url
+                  diffuse.png: signed s3 url
+                qc:
+                  render_0.png: signed s3 url
+                  render_1.png: signed s3 url
+                  diff_0.png: signed s3 url
+                  diff_1.png: signed s3 url
       tags:
-        - 'Base Asset'
+      - Base Asset
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the base asset'
-        example: 281
-        required: true
-        schema:
-          type: integer
-  '/api/v2/rawmodel/{id}/downloads/zip':
+    - in: path
+      name: id
+      description: The id of the base asset
+      example: 281
+      required: true
+      schema:
+        type: integer
+  /api/v2/rawmodel/{id}/downloads/zip:
     get:
-      summary: 'Download zip'
+      summary: Download zip
       operationId: downloadZip
-      description: "Downloads all model files as zip.\n\nA stream is returned which contains the model data."
+      description: 'Downloads all model files as zip.
+
+
+        A stream is returned which contains the model data.'
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             text/plain:
               schema:
                 type: string
-                example: 'Streamed response'
+                example: Streamed response
       tags:
-        - 'Base Asset'
+      - Base Asset
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the base asset'
-        example: 281
-        required: true
-        schema:
-          type: integer
-  '/api/v2/rawmodel/{id}/renders':
+    - in: path
+      name: id
+      description: The id of the base asset
+      example: 281
+      required: true
+      schema:
+        type: integer
+  /api/v2/rawmodel/{id}/renders:
     get:
-      summary: 'Get QC render files for a base asset'
+      summary: Get QC render files for a base asset
       operationId: getQCRenderFilesForABaseAsset
-      description: "Returns hash signed links for the quality control images generated after importing the Rawmodel\n\nThe keys of the images are built with the following reasoning:\n`<format>-<name of the image>.png`\n\n`<format>` refers to the 3D input format to be optimized\n\nWith that said, the keys of the images for an input usdz will be:\n- \"usdz-back.png\"\n- \"usdz-bottom.png\"\n- \"usdz-front.png\"\n- \"usdz-left.png\"\n- \"usdz-right.png\"\n- \"usdz-top.png\"\n\nOnly available for Rawmodels that were imported after 2024-07"
+      description: 'Returns hash signed links for the quality control images generated
+        after importing the Rawmodel
+
+
+        The keys of the images are built with the following reasoning:
+
+        `<format>-<name of the image>.png`
+
+
+        `<format>` refers to the 3D input format to be optimized
+
+
+        With that said, the keys of the images for an input usdz will be:
+
+        - "usdz-back.png"
+
+        - "usdz-bottom.png"
+
+        - "usdz-front.png"
+
+        - "usdz-left.png"
+
+        - "usdz-right.png"
+
+        - "usdz-top.png"
+
+
+        Only available for Rawmodels that were imported after 2024-07'
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             text/plain:
               schema:
                 type: string
                 example: ''
-        404:
+        '404':
           description: error
           content:
             text/plain:
@@ -747,83 +884,85 @@ paths:
                 type: string
                 example: ''
       tags:
-        - 'Base Asset'
+      - Base Asset
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the Rawmodel'
-        example: 281
-        required: true
-        schema:
-          type: integer
-  '/api/v2/rawmodel/{id}/tags/{tagId}':
+    - in: path
+      name: id
+      description: The id of the Rawmodel
+      example: 281
+      required: true
+      schema:
+        type: integer
+  /api/v2/rawmodel/{id}/tags/{tagId}:
     delete:
-      summary: 'Delete Tag of a Base Asset'
+      summary: Delete Tag of a Base Asset
       operationId: deleteTagOfABaseAsset
       description: ''
       parameters: []
-      responses: {  }
+      responses: {}
       tags:
-        - 'Base Asset'
+      - Base Asset
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the base asset'
-        example: 281
-        required: true
-        schema:
-          type: integer
-      -
-        in: path
-        name: tagId
-        description: 'The id of the tag that will be deleted'
-        example: 2
-        required: true
-        schema:
-          type: integer
+    - in: path
+      name: id
+      description: The id of the base asset
+      example: 281
+      required: true
+      schema:
+        type: integer
+    - in: path
+      name: tagId
+      description: The id of the tag that will be deleted
+      example: 2
+      required: true
+      schema:
+        type: integer
   /api/v2/rawmodel:
     get:
-      summary: 'Get Base Assets'
+      summary: Get Base Assets
       operationId: getBaseAssets
-      description: 'Paginated response of your base assets. Search for base assets by name or tag'
+      description: Paginated response of your base assets. Search for base assets
+        by name or tag. Omit the optional query parameters to list all base assets.
       parameters:
-        -
-          in: query
-          name: q
-          description: 'Optional. Search term to filter base assets by name or tag.'
+      - in: query
+        name: q
+        description: Optional. Search term to filter base assets by name or tag.
+          Omit to return all base assets.
+        example: '"Low-Poly"'
+        required: false
+        schema:
+          type: string
+          description: Optional. Search term to filter base assets by name or tag.
           example: '"Low-Poly"'
-          required: false
-          schema:
-            type: string
-            description: 'Optional. Search term to filter base assets by name or tag.'
-            example: '"Low-Poly"'
-            nullable: false
-        -
-          in: query
-          name: page
-          description: 'Optional. Page number for pagination. Defaults to 1. If the requested page exceeds the maximum available (based on total assets and items per page), the last available page will be returned.'
+          nullable: false
+      - in: query
+        name: page
+        description: Optional. Page number for pagination. Defaults to 1. If the requested
+          page exceeds the maximum available (based on total assets and items per
+          page), the last available page will be returned.
+        example: 3
+        required: false
+        schema:
+          type: integer
+          description: Optional. Page number for pagination. Defaults to 1. If the
+            requested page exceeds the maximum available (based on total assets and
+            items per page), the last available page will be returned.
           example: 3
-          required: false
-          schema:
-            type: integer
-            description: 'Optional. Page number for pagination. Defaults to 1. If the requested page exceeds the maximum available (based on total assets and items per page), the last available page will be returned.'
-            example: 3
-            nullable: false
-        -
-          in: query
-          name: itemsPerPage
-          description: 'Optional. Number of items per page. Defaults to 10. Maximum is 50.'
+          nullable: false
+      - in: query
+        name: itemsPerPage
+        description: Optional. Number of items per page. Defaults to 10. Maximum is
+          50.
+        example: 25
+        required: false
+        schema:
+          type: integer
+          description: Optional. Number of items per page. Defaults to 10. Maximum
+            is 50.
           example: 25
-          required: false
-          schema:
-            type: integer
-            description: 'Optional. Number of items per page. Defaults to 10. Maximum is 50.'
-            example: 25
-            nullable: false
+          nullable: false
       responses:
-        200:
+        '200':
           description: success
           content:
             application/json:
@@ -831,8 +970,57 @@ paths:
                 type: object
                 example:
                   data:
-                    -
-                      id: 1
+                  - id: 1
+                    name: teapot
+                    external: false
+                    upload_status: complete
+                    size: 315088
+                    created_at: '2022-05-24T15:05:47+02:00'
+                    scale_factor: '1'
+                    has_errors: true
+                    format: fbx
+                    tags:
+                    - id: 1
+                      name: Low-Poly
+                      created_at: '2022-05-24 15:06:03'
+                      updated_at: '2022-05-24 15:06:03'
+                      raw_id: 1
+                    downloads:
+                      error.log: signed url for the error.log
+                      info.log: signed url for info.log
+                      metrics.json: signed url for the metrics.json
+                      rpd_info.json: signed url for the rpd_info.json
+                      teapot.fbx: signed url for the teapot.obj
+                      thumb.jpg: signed url for the thumb.jpg
+                      warning.log: signed url for the warning.log
+                  links:
+                    first: https://url/api/v2/rawmodel?page=1
+                    last: https://url/api/v2/rawmodel?page=1
+                    prev: null
+                    next: null
+                  meta:
+                    current_page: 1
+                    from: 1
+                    last_page: 1
+                    links:
+                    - url: null
+                      label: '&laquo; Previous'
+                      active: false
+                    - url: https://url/api/v2/rawmodel?page=1
+                      label: '1'
+                      active: true
+                    - url: null
+                      label: Next &raquo;
+                      active: false
+                    path: https://url/api/v2/rawmodel
+                    per_page: 10
+                    to: 1
+                    total: 1
+                properties:
+                  data:
+                    type: array
+                    example:
+                    - id: 1
                       name: teapot
                       external: false
                       upload_status: complete
@@ -842,75 +1030,19 @@ paths:
                       has_errors: true
                       format: fbx
                       tags:
-                        -
-                          id: 1
-                          name: Low-Poly
-                          created_at: '2022-05-24 15:06:03'
-                          updated_at: '2022-05-24 15:06:03'
-                          raw_id: 1
+                      - id: 1
+                        name: Low-Poly
+                        created_at: '2022-05-24 15:06:03'
+                        updated_at: '2022-05-24 15:06:03'
+                        raw_id: 1
                       downloads:
-                        error.log: 'signed url for the error.log'
-                        info.log: 'signed url for info.log'
-                        metrics.json: 'signed url for the metrics.json'
-                        rpd_info.json: 'signed url for the rpd_info.json'
-                        teapot.fbx: 'signed url for the teapot.obj'
-                        thumb.jpg: 'signed url for the thumb.jpg'
-                        warning.log: 'signed url for the warning.log'
-                  links:
-                    first: 'https://url/api/v2/rawmodel?page=1'
-                    last: 'https://url/api/v2/rawmodel?page=1'
-                    prev: null
-                    next: null
-                  meta:
-                    current_page: 1
-                    from: 1
-                    last_page: 1
-                    links:
-                      -
-                        url: null
-                        label: '&laquo; Previous'
-                        active: false
-                      -
-                        url: 'https://url/api/v2/rawmodel?page=1'
-                        label: '1'
-                        active: true
-                      -
-                        url: null
-                        label: 'Next &raquo;'
-                        active: false
-                    path: 'https://url/api/v2/rawmodel'
-                    per_page: 10
-                    to: 1
-                    total: 1
-                properties:
-                  data:
-                    type: array
-                    example:
-                      -
-                        id: 1
-                        name: teapot
-                        external: false
-                        upload_status: complete
-                        size: 315088
-                        created_at: '2022-05-24T15:05:47+02:00'
-                        scale_factor: '1'
-                        has_errors: true
-                        format: fbx
-                        tags:
-                          -
-                            id: 1
-                            name: Low-Poly
-                            created_at: '2022-05-24 15:06:03'
-                            updated_at: '2022-05-24 15:06:03'
-                            raw_id: 1
-                        downloads:
-                          error.log: 'signed url for the error.log'
-                          info.log: 'signed url for info.log'
-                          metrics.json: 'signed url for the metrics.json'
-                          rpd_info.json: 'signed url for the rpd_info.json'
-                          teapot.fbx: 'signed url for the teapot.obj'
-                          thumb.jpg: 'signed url for the thumb.jpg'
-                          warning.log: 'signed url for the warning.log'
+                        error.log: signed url for the error.log
+                        info.log: signed url for info.log
+                        metrics.json: signed url for the metrics.json
+                        rpd_info.json: signed url for the rpd_info.json
+                        teapot.fbx: signed url for the teapot.obj
+                        thumb.jpg: signed url for the thumb.jpg
+                        warning.log: signed url for the warning.log
                     items:
                       type: object
                       properties:
@@ -944,12 +1076,11 @@ paths:
                         tags:
                           type: array
                           example:
-                            -
-                              id: 1
-                              name: Low-Poly
-                              created_at: '2022-05-24 15:06:03'
-                              updated_at: '2022-05-24 15:06:03'
-                              raw_id: 1
+                          - id: 1
+                            name: Low-Poly
+                            created_at: '2022-05-24 15:06:03'
+                            updated_at: '2022-05-24 15:06:03'
+                            raw_id: 1
                           items:
                             type: object
                             properties:
@@ -973,40 +1104,42 @@ paths:
                           properties:
                             error.log:
                               type: string
-                              example: 'signed url for the error.log'
+                              example: signed url for the error.log
                             info.log:
                               type: string
-                              example: 'signed url for info.log'
+                              example: signed url for info.log
                             metrics.json:
                               type: string
-                              example: 'signed url for the metrics.json'
+                              example: signed url for the metrics.json
                             rpd_info.json:
                               type: string
-                              example: 'signed url for the rpd_info.json'
+                              example: signed url for the rpd_info.json
                             teapot.fbx:
                               type: string
-                              example: 'signed url for the teapot.obj'
+                              example: signed url for the teapot.obj
                             thumb.jpg:
                               type: string
-                              example: 'signed url for the thumb.jpg'
+                              example: signed url for the thumb.jpg
                             warning.log:
                               type: string
-                              example: 'signed url for the warning.log'
+                              example: signed url for the warning.log
                   links:
                     type: object
                     properties:
                       first:
                         type: string
-                        example: 'https://url/api/v2/rawmodel?page=1'
+                        example: https://url/api/v2/rawmodel?page=1
                       last:
                         type: string
-                        example: 'https://url/api/v2/rawmodel?page=1'
+                        example: https://url/api/v2/rawmodel?page=1
                       prev:
                         type: string
                         example: null
+                        nullable: true
                       next:
                         type: string
                         example: null
+                        nullable: true
                   meta:
                     type: object
                     properties:
@@ -1022,24 +1155,22 @@ paths:
                       links:
                         type: array
                         example:
-                          -
-                            url: null
-                            label: '&laquo; Previous'
-                            active: false
-                          -
-                            url: 'https://url/api/v2/rawmodel?page=1'
-                            label: '1'
-                            active: true
-                          -
-                            url: null
-                            label: 'Next &raquo;'
-                            active: false
+                        - url: null
+                          label: '&laquo; Previous'
+                          active: false
+                        - url: https://url/api/v2/rawmodel?page=1
+                          label: '1'
+                          active: true
+                        - url: null
+                          label: Next &raquo;
+                          active: false
                         items:
                           type: object
                           properties:
                             url:
                               type: string
                               example: null
+                              nullable: true
                             label:
                               type: string
                               example: '&laquo; Previous'
@@ -1048,7 +1179,7 @@ paths:
                               example: false
                       path:
                         type: string
-                        example: 'https://url/api/v2/rawmodel'
+                        example: https://url/api/v2/rawmodel
                       per_page:
                         type: integer
                         example: 10
@@ -1059,16 +1190,16 @@ paths:
                         type: integer
                         example: 1
       tags:
-        - 'Base Asset'
+      - Base Asset
   /api/v2/rawmodel/delete:
     post:
-      summary: 'Delete Multiple Base Assets'
+      summary: Delete Multiple Base Assets
       operationId: deleteMultipleBaseAssets
       description: ''
       parameters: []
-      responses: {  }
+      responses: {}
       tags:
-        - 'Base Asset'
+      - Base Asset
       requestBody:
         required: true
         content:
@@ -1078,69 +1209,75 @@ paths:
               properties:
                 ids:
                   type: array
-                  description: 'An array of base asset ids that should be deleted'
+                  description: An array of base asset ids that should be deleted
                   example:
-                    - 726
-                    - 324
+                  - 726
+                  - 324
                   items:
                     type: integer
               required:
-                - ids
-  '/api/v2/rawmodel/{id}/addFormats':
+              - ids
+  /api/v2/rawmodel/{id}/addFormats:
     post:
-      summary: 'Add converted formats to the model'
+      summary: Add converted formats to the model
       operationId: addConvertedFormatsToTheModel
-      description: "This endpoint starts the conversion process to the provided target formats. The conversion process is asynchronous and can take some time to complete.\nThe status of the conversion can be checked using the `processedFormats` endpoint."
+      description: 'This endpoint starts the conversion process to the provided target
+        formats. The conversion process is asynchronous and can take some time to
+        complete.
+
+        The status of the conversion can be checked using the `processedFormats` endpoint.'
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             application/json:
               schema:
                 type: object
                 example:
-                  message: 'Formats conversion started.'
+                  message: Formats conversion started.
                   formats:
-                    - gltf
-                    - usdz
+                  - gltf
+                  - usdz
                 properties:
                   message:
                     type: string
-                    example: 'Formats conversion started.'
+                    example: Formats conversion started.
                   formats:
                     type: array
                     example:
-                      - gltf
-                      - usdz
+                    - gltf
+                    - usdz
                     items:
                       type: string
-        400:
+        '400':
           description: error
           content:
             application/json:
               schema:
                 type: object
                 example:
-                  message: 'Model already has the following format(s) exported: gltf, usdz'
+                  message: 'Model already has the following format(s) exported: gltf,
+                    usdz'
                 properties:
                   message:
                     type: string
-                    example: 'Model already has the following format(s) exported: gltf, usdz'
-        404:
+                    example: 'Model already has the following format(s) exported:
+                      gltf, usdz'
+        '404':
           description: error
           content:
             application/json:
               schema:
                 type: object
                 example:
-                  message: 'Model with this ID was not found!'
+                  message: Model with this ID was not found!
                 properties:
                   message:
                     type: string
-                    example: 'Model with this ID was not found!'
+                    example: Model with this ID was not found!
       tags:
-        - 'Base Asset'
+      - Base Asset
       requestBody:
         required: true
         content:
@@ -1150,31 +1287,31 @@ paths:
               properties:
                 formats:
                   type: array
-                  description: 'An array of formats to convert the model to.'
+                  description: An array of formats to convert the model to.
                   example:
-                    - gltf
-                    - usdz
+                  - gltf
+                  - usdz
                   items:
                     type: string
               required:
-                - formats
+              - formats
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the base asset'
-        example: 281
-        required: true
-        schema:
-          type: integer
-  '/api/v2/rawmodel/{id}/processedFormats':
+    - in: path
+      name: id
+      description: The id of the base asset
+      example: 281
+      required: true
+      schema:
+        type: integer
+  /api/v2/rawmodel/{id}/processedFormats:
     get:
-      summary: 'Get format conversion jobs'
+      summary: Get format conversion jobs
       operationId: getFormatConversionJobs
-      description: 'Returns an array of objects, each object represents a format conversion job with its status, progress, and target formats.'
+      description: Returns an array of objects, each object represents a format conversion
+        job with its status, progress, and target formats.
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             application/json:
@@ -1183,48 +1320,51 @@ paths:
                 items:
                   type: object
                 example:
-                  -
-                    progress: 0
-                    status: queued
-                    formats:
-                      - gltf
-                      - usdc
-                  -
-                    progress: 100
-                    status: finished
-                    formats:
-                      - fbx
-                  -
-                    progress: 50
-                    status: failed
-                    formats:
-                      - usdz
-                      - usda
-                  -
-                    progress: 50
-                    status: executing
-                    formats:
-                      - usdz
-                      - stl
+                - progress: 0
+                  status: queued
+                  formats:
+                  - gltf
+                  - usdc
+                - progress: 100
+                  status: finished
+                  formats:
+                  - fbx
+                - progress: 50
+                  status: failed
+                  formats:
+                  - usdz
+                  - usda
+                - progress: 50
+                  status: executing
+                  formats:
+                  - usdz
+                  - stl
       tags:
-        - 'Base Asset'
+      - Base Asset
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the base asset'
-        example: 281
-        required: true
-        schema:
-          type: integer
+    - in: path
+      name: id
+      description: The id of the base asset
+      example: 281
+      required: true
+      schema:
+        type: integer
   /api/v2/rawmodel/api-upload/start:
     post:
-      summary: 'Create Base Asset - Get Upload Link'
+      summary: Create Base Asset - Get Upload Link
       operationId: createBaseAssetGetUploadLink
-      description: "This endpoint initiates a new base asset upload process and returns:\n1. An ID for the new base asset\n2. Pre-signed URLs for direct file uploads to our s3 storage\n\nUpload Process:\n1. Call this endpoint to get the upload URLs\n2. For each file in the s3_upload_urls:\n   - Upload the file using an HTTP PUT request to the provided URL\n3. After ALL files are uploaded, call the complete_upload URL to finalize the process\n\nStep by Step Usage:\n1. Upload mymodel.glb:\n   - curl -X PUT -T \"mymodel.glb\" \"use-signed-url-for-glb\"\n2. Upload material.mat:\n   - curl -X PUT -T \"material.mat\" \"use-signed-url-for-mat\"\n3. Finally, call the complete_upload URL:\n   - curl -X GET \"use-complete-upload-url\""
+      description: "This endpoint initiates a new base asset upload process and returns:\n\
+        1. An ID for the new base asset\n2. Pre-signed URLs for direct file uploads\
+        \ to our s3 storage\n\nUpload Process:\n1. Call this endpoint to get the upload\
+        \ URLs\n2. For each file in the s3_upload_urls:\n   - Upload the file using\
+        \ an HTTP PUT request to the provided URL\n3. After ALL files are uploaded,\
+        \ call the complete_upload URL to finalize the process\n\nStep by Step Usage:\n\
+        1. Upload mymodel.glb:\n   - curl -X PUT -T \"mymodel.glb\" \"use-signed-url-for-glb\"\
+        \n2. Upload material.mat:\n   - curl -X PUT -T \"material.mat\" \"use-signed-url-for-mat\"\
+        \n3. Finally, call the complete_upload URL:\n   - curl -X GET \"use-complete-upload-url\""
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             application/json:
@@ -1234,9 +1374,9 @@ paths:
                   id: 1
                   links:
                     s3_upload_urls:
-                      mymodel.glb: 'signed url for mymodel.glb'
-                      material.mat: 'signed url for material.mat'
-                    complete_upload: 'https://api.rapidpipeline.com/api/v2/rawmodels/1/api-upload/complete'
+                      mymodel.glb: signed url for mymodel.glb
+                      material.mat: signed url for material.mat
+                    complete_upload: https://api.rapidpipeline.com/api/v2/rawmodels/1/api-upload/complete
                 properties:
                   id:
                     type: integer
@@ -1249,15 +1389,15 @@ paths:
                         properties:
                           mymodel.glb:
                             type: string
-                            example: 'signed url for mymodel.glb'
+                            example: signed url for mymodel.glb
                           material.mat:
                             type: string
-                            example: 'signed url for material.mat'
+                            example: signed url for material.mat
                       complete_upload:
                         type: string
-                        example: 'https://api.rapidpipeline.com/api/v2/rawmodels/1/api-upload/complete'
+                        example: https://api.rapidpipeline.com/api/v2/rawmodels/1/api-upload/complete
       tags:
-        - 'Base Asset'
+      - Base Asset
       requestBody:
         required: true
         content:
@@ -1267,33 +1407,42 @@ paths:
               properties:
                 model_name:
                   type: string
-                  description: 'The name of the base asset'
+                  description: The name of the base asset
                   example: teapot
                   nullable: false
                 filenames:
                   type: array
-                  description: 'The names of the files to be uploaded (including the extension)'
+                  description: The names of the files to be uploaded (including the
+                    extension)
                   example:
-                    - mymodel.glb
-                    - material.mat
+                  - mymodel.glb
+                  - material.mat
                   items:
                     type: string
                 is_zip:
                   type: boolean
-                  description: 'Indicate if the file is a zip'
+                  description: Indicate if the file is a zip
                   example: null
-                  nullable: false
+                  nullable: true
               required:
-                - model_name
-                - filenames
-  '/api/v2/rawmodel/{id}/api-upload/complete':
+              - model_name
+              - filenames
+  /api/v2/rawmodel/{id}/api-upload/complete:
     get:
-      summary: 'Create Base Asset - Complete Upload'
+      summary: Create Base Asset - Complete Upload
       operationId: createBaseAssetCompleteUpload
-      description: "Final step in the upload process. Call this endpoint after:\n1. Getting upload URLs from \"Create Base Asset - Get Upload Link\"\n2. Uploading all files to S3 using the provided signed URLs\n\nExample:\n1. Start: POST /api/v2/rawmodel/api-upload/start\n   - Receive upload URLs and base asset ID\n2. Upload: PUT each file to S3 using their respective signed URL\n   - curl -X PUT -T \"mymodel.glb\" \"signed_url_from_response\"\n3. Complete: GET /api/v2/rawmodel/{id}/api-upload/complete\n   - Triggers processing of your uploaded files\n\nAfter completion:\n- Your model will begin processing\n- Use our \"analysis_finished\" webhook to get notified when ready for optimization"
+      description: "Final step in the upload process. Call this endpoint after:\n\
+        1. Getting upload URLs from \"Create Base Asset - Get Upload Link\"\n2. Uploading\
+        \ all files to S3 using the provided signed URLs\n\nExample:\n1. Start: POST\
+        \ /api/v2/rawmodel/api-upload/start\n   - Receive upload URLs and base asset\
+        \ ID\n2. Upload: PUT each file to S3 using their respective signed URL\n \
+        \  - curl -X PUT -T \"mymodel.glb\" \"signed_url_from_response\"\n3. Complete:\
+        \ GET /api/v2/rawmodel/{id}/api-upload/complete\n   - Triggers processing\
+        \ of your uploaded files\n\nAfter completion:\n- Your model will begin processing\n\
+        - Use our \"analysis_finished\" webhook to get notified when ready for optimization"
       parameters: []
       responses:
-        200:
+        '200':
           description: ''
           content:
             application/json:
@@ -1308,16 +1457,16 @@ paths:
                     size: 438680
                     created_at: '2021-02-08T16:59:52+01:00'
                     rapid_models:
-                      - 635
-                      - 617
+                    - 635
+                    - 617
                     scale_factor: '10'
                     downloads:
-                      error.log: 'signed url for the error.log'
-                      info.log: 'signed url for the info.log'
-                      metrics.json: 'signed url for the metrics.json'
-                      rpd_info.json: 'signed url for the rpd_info.json'
-                      teapot.obj: 'signed url for the uploaded file'
-                      thumb.jpg: 'signed url for the thumb.jpg'
+                      error.log: signed url for the error.log
+                      info.log: signed url for the info.log
+                      metrics.json: signed url for the metrics.json
+                      rpd_info.json: signed url for the rpd_info.json
+                      teapot.obj: signed url for the uploaded file
+                      thumb.jpg: signed url for the thumb.jpg
                 properties:
                   data:
                     type: object
@@ -1325,6 +1474,7 @@ paths:
                       id:
                         type: integer
                         example: 281
+                        nullable: true
                       name:
                         type: string
                         example: teapot
@@ -1337,16 +1487,19 @@ paths:
                       size:
                         type: integer
                         example: 438680
+                        nullable: true
                       created_at:
                         type: string
                         example: '2021-02-08T16:59:52+01:00'
                       rapid_models:
                         type: array
                         example:
-                          - 635
-                          - 617
+                        - 635
+                        - 617
                         items:
                           type: integer
+                          nullable: true
+                        nullable: true
                       scale_factor:
                         type: string
                         example: '10'
@@ -1355,133 +1508,259 @@ paths:
                         properties:
                           error.log:
                             type: string
-                            example: 'signed url for the error.log'
+                            example: signed url for the error.log
                           info.log:
                             type: string
-                            example: 'signed url for the info.log'
+                            example: signed url for the info.log
                           metrics.json:
                             type: string
-                            example: 'signed url for the metrics.json'
+                            example: signed url for the metrics.json
                           rpd_info.json:
                             type: string
-                            example: 'signed url for the rpd_info.json'
+                            example: signed url for the rpd_info.json
                           teapot.obj:
                             type: string
-                            example: 'signed url for the uploaded file'
+                            example: signed url for the uploaded file
                           thumb.jpg:
                             type: string
-                            example: 'signed url for the thumb.jpg'
+                            example: signed url for the thumb.jpg
       tags:
-        - 'Base Asset'
+      - Base Asset
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The ID received from the start endpoint'
-        example: 281
-        required: true
-        schema:
-          type: integer
-  '/api/v2/rawmodel/{id}/api-upload/retry':
+    - in: path
+      name: id
+      description: The ID received from the start endpoint
+      example: 281
+      required: true
+      schema:
+        type: integer
+  /api/v2/rawmodel/{id}/api-upload/retry:
     post:
-      summary: 'Retries a failed import'
+      summary: Retries a failed import
       operationId: retriesAFailedImport
       description: ''
       parameters: []
-      responses: {  }
+      responses: {}
       tags:
-        - 'Base Asset'
+      - Base Asset
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the base asset'
-        example: 281
-        required: true
-        schema:
-          type: integer
-  '/api/v2/rawmodel/{id}/rapidmodels':
+    - in: path
+      name: id
+      description: The id of the base asset
+      example: 281
+      required: true
+      schema:
+        type: integer
+  /api/v2/rawmodel/{id}/rapidmodels:
     get:
-      summary: 'Get Associated Rapid Models'
+      summary: Get Associated Rapid Models
       operationId: getAssociatedRapidModels
-      description: 'Get all rapid models which were optimized from this base asset'
+      description: Get all rapid models which were optimized from this base asset
       parameters: []
       responses:
-        200:
+        '200':
           description: ''
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-                example: "{\n   \"data\": [\n       {\n           \"id\": 1,\n           \"name\": \"teapot\",\n           \"optimization_status\": \"done\",\n           \"rawmodel\": {...},\n           \"job_status\": {...},\n           \"created_at\": \"2021-02-16T16:50:41+01:00\",\n           \"updated_at\": \"2021-02-16T16:50:53+01:00\",\n           \"progress\": 100,\n           \"processing_step\": \"Done\",\n           \"external\": false,\n           \"rapid_compact_core_version\": \"6.1.1\",\n           \"tags\": [\n                     {\n                         \"id\": 377,\n                         \"name\": \"Preserve UVs\",\n                         \"created_at\": \"2024-02-15 18:05:36+00\",\n                         \"updated_at\": \"2024-02-15 18:05:36+00\",\n                         \"rapid_id\": 635\n                     }\n                   ],\n           \"export_name\": \"export name\",\n           \"uuid\": \"d8316d1f-3c7d-4777-b72e-c760064f9d08\",\n           \"accepted\": false,\n           \"meta\": {\n               \"size\": 573420,\n               \"exportSize\": 1029548\n           },\n           \"thumbnail\": {},\n           \"rpd_info\": \"signed url for the rpd_info.json\",\n           \"rpd_warnings\": \"signed url for the warning.log\",\n           \"rpd_error\": \"signed url for the error.log\",\n           \"downloads\": {\n               \"glb\": \"signed url for the .glb\"\n           }\n       }\n   ]\n}"
+                type: object
+                additionalProperties: true
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        optimization_status:
+                          type: string
+                        created_at:
+                          type: string
+                        updated_at:
+                          type: string
+                        progress:
+                          type: integer
+                        processing_step:
+                          type: string
+                        external:
+                          type: boolean
+                        rapid_compact_core_version:
+                          type: string
+                        tags:
+                          type: array
+                          items:
+                            type: object
+                            additionalProperties: true
+                        export_name:
+                          type: string
+                        uuid:
+                          type: string
+                        accepted:
+                          type: boolean
+                        meta:
+                          type: object
+                          additionalProperties: true
+                        thumbnail:
+                          type: object
+                          additionalProperties: true
+                        rpd_info:
+                          type: string
+                        rpd_warnings:
+                          type: string
+                        rpd_error:
+                          type: string
+                        downloads:
+                          type: object
+                          additionalProperties: true
+              example:
+                data:
+                - id: 1
+                  name: teapot
+                  optimization_status: done
       tags:
-        - 'Base Asset'
+      - Base Asset
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the base asset'
-        example: 1
-        required: true
-        schema:
-          type: integer
+    - in: path
+      name: id
+      description: The id of the base asset
+      example: 1
+      required: true
+      schema:
+        type: integer
   /api/v2/embeds:
     get:
-      summary: 'Get Embeds'
+      summary: Get Embeds
       operationId: getEmbeds
-      description: 'Returns the embeds of the user'
+      description: Returns the embeds of the user
       parameters:
-        -
-          in: query
-          name: page
-          description: 'Page number to fetch'
+      - in: query
+        name: page
+        description: Page number to fetch
+        example: 15
+        required: false
+        schema:
+          type: integer
+          description: Page number to fetch
+          example: 15
+          nullable: false
+      - in: query
+        name: q
+        description: Search string to filter embeds by name
+        example: itaque
+        required: false
+        schema:
+          type: string
+          description: Search string to filter embeds by name
+          example: itaque
+          nullable: false
+      - in: query
+        name: rapidId
+        description: Filter embeds by rapidmodel id
+        example: 8
+        required: false
+        schema:
+          type: integer
+          description: Filter embeds by rapidmodel id
           example: 8
-          required: false
-          schema:
-            type: integer
-            description: 'Page number to fetch'
-            example: 8
-            nullable: false
-        -
-          in: query
-          name: q
-          description: 'Search string to filter embeds by name'
-          example: dolorum
-          required: false
-          schema:
-            type: string
-            description: 'Search string to filter embeds by name'
-            example: dolorum
-            nullable: false
-        -
-          in: query
-          name: rapidId
-          description: 'Filter embeds by rapidmodel id'
-          example: 10
-          required: false
-          schema:
-            type: integer
-            description: 'Filter embeds by rapidmodel id'
-            example: 10
-            nullable: false
+          nullable: false
       responses:
-        200:
+        '200':
           description: ''
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-                example: "{\n  data: [\n    {\n      \"id\":53,\n      \"identifier\":\"fRoL5P9iyb\",\n      \"name\":\"RezColorChecker Embed\",\n      \"user_id\":45,\n      \"model_id\":70,\n      \"view_count\":13,\n      \"created_at\":\"2022-05-04T12:10:52.000000Z\",\n      \"updated_at\":\"2022-06-14T13:13:00.000000Z\",\n      \"rapidModelId\": 73,\n      \"rapidModelName\":\"RezColorChecker\",\n      \"thumbnail\":\"https://2vv7ezymi86va.cloudfront.net/rapid/ba12f8a6-....\",\n      \"url\":\"https://api.rapidpipeline.com/viewer?id=123456\"\n    },\n    ...\n  ],\n  links: {\n    first: \"http://...\",\n    last: \"http://...\",\n    prev: null,\n    next: \"http://...\"\n  },\n  meta: {\n    \"current_page\":1,\n    \"from\":1,\n    \"last_page\":2,\n    \"per_page\":10,\n    \"to\":10,\n    \"total\":15,\n    links: [\n      {\n        \"url\":null,\n        \"label\":\"Previous\",\n        \"active\":false\n      },\n      ...\n    ]\n  }\n}"
+                type: object
+                additionalProperties: true
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                      properties:
+                        id:
+                          type: integer
+                        identifier:
+                          type: string
+                        name:
+                          type: string
+                        user_id:
+                          type: integer
+                        model_id:
+                          type: integer
+                        view_count:
+                          type: integer
+                        created_at:
+                          type: string
+                        updated_at:
+                          type: string
+                        rapidModelId:
+                          type: integer
+                        rapidModelName:
+                          type: string
+                        thumbnail:
+                          type: string
+                        url:
+                          type: string
+                  links:
+                    type: object
+                    additionalProperties: true
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                      next:
+                        type: string
+                  meta:
+                    type: object
+                    additionalProperties: true
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties: true
+                          properties:
+                            url:
+                              type: string
+                            label:
+                              type: string
+                            active:
+                              type: boolean
+              example:
+                data:
+                - id: 53
+                  identifier: fRoL5P9iyb
+                  name: RezColorChecker Embed
       tags:
-        - Embeds
-  '/api/v2/embeds/{id}':
+      - Embeds
+  /api/v2/embeds/{id}:
     get:
-      summary: 'Get Embed'
+      summary: Get Embed
       operationId: getEmbed
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             application/json:
@@ -1491,7 +1770,7 @@ paths:
                   data:
                     id: 42
                     identifier: ZmR8oTVEiR
-                    name: 'teapot Embed'
+                    name: teapot Embed
                     user_id: 1
                     model_id: 1
                     view_count: 100
@@ -1509,7 +1788,7 @@ paths:
                         example: ZmR8oTVEiR
                       name:
                         type: string
-                        example: 'teapot Embed'
+                        example: teapot Embed
                       user_id:
                         type: integer
                         example: 1
@@ -1526,42 +1805,61 @@ paths:
                         type: string
                         example: '2022-06-27T14:20:17.000000Z'
       tags:
-        - Embeds
+      - Embeds
     delete:
-      summary: 'Delete Embed'
+      summary: Delete Embed
       operationId: deleteEmbed
       description: ''
       parameters: []
       responses:
-        204:
+        '204':
           description: success
       tags:
-        - Embeds
+      - Embeds
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the embed'
-        example: 42
-        required: true
-        schema:
-          type: integer
+    - in: path
+      name: id
+      description: The id of the embed
+      example: 42
+      required: true
+      schema:
+        type: integer
   /api/v2/embeds/create:
     post:
-      summary: 'Create Embed'
+      summary: Create Embed
       operationId: createEmbed
-      description: "Create an embed from a rapid model.\nThe webhooks will be called with the 'embed_creation' event to notify the user as soon as the embed is created."
+      description: 'Create an embed from a rapid model.
+
+        The webhooks will be called with the ''embed_creation'' event to notify the
+        user as soon as the embed is created.'
       parameters: []
       responses:
-        201:
+        '201':
           description: success
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-                example: "{\n   'status': 'Successful',\n   'message': 'Embed created successfully.',\n   'rapidmodel_id': 31,\n   'embed_id': 513,\n   'embed_url': 'http://api.rapidpipeline.com/viewer?id=iKlCoxprxK',\n}"
+                type: object
+                additionalProperties: true
+                properties:
+                  status:
+                    type: string
+                  message:
+                    type: string
+                  rapidmodel_id:
+                    type: integer
+                  embed_id:
+                    type: integer
+                  embed_url:
+                    type: string
+              example:
+                status: Successful
+                message: Embed created successfully.
+                rapidmodel_id: 31
+                embed_id: 513
+                embed_url: http://api.rapidpipeline.com/viewer?id=iKlCoxprxK
       tags:
-        - Embeds
+      - Embeds
       requestBody:
         required: true
         content:
@@ -1571,55 +1869,101 @@ paths:
               properties:
                 model_id:
                   type: integer
-                  description: 'The id of the rapid model'
+                  description: The id of the rapid model
                   example: 281
                   nullable: false
                 name:
                   type: string
-                  description: 'The name of your embed'
+                  description: The name of your embed
                   example: '"my embeds name"'
                   nullable: false
                 save_user_theme:
                   type: boolean
-                  description: 'Saves the configurator config'
-                  example: false
+                  description: Saves the configurator config
+                  example: true
                   nullable: false
                 config:
                   type: string
-                  description: 'The viewer configuration. Must be a valid JSON string'
-                  example: "{\n     \"renderCanvasCSS\" : \"background:;\",\n     \"environmentURL\" : \"images/environment.dds\",\n     \"companyLogo\" : \"data:image/png;base64,iVBORw0KGgoAAAANSUh...kSuQmCC\",\n     \"companyLogoToggle\" : \"true\",\n     \"companyLink\" : \"https://dgg3d.com\",\n     \"companyLogoCSS\" : \"width:120px;height:71.3004px;background:;\",\n     \"productLogo\" : \"data:image/png;base64,iVBORw0KGgoAAAANSUh...ASUVORK5CYII=\",\n     \"productLogoToggle\" : \"true\",\n     \"productLink\" : \"https://rapidpipeline.com\",\n     \"productLogoCSS\" : \"width:120px;height:21.4819px;background:;\",\n     \"threeDLogo\" : \"data:image/png;base64,iVBORw0KGgoAAAANSUhEU...OAAAAAElFTkSuQmCC\",\n     \"threeDLogoToggle\" : \"true\",\n     \"threeDLogoCSS\" : \"width:24px;height:24px;background:;\",\n     \"interactiveToolsCSS\" : \"background:;\",\n     \"skyBoxEnabled\" : \"false\",\n     \"skyBoxBlur\" : \"0\",\n     \"shadowToggle\" : \"false\",\n     \"shadowOpacity\" : \"0.5\",\n     \"shadowBlur\" : \"0\",\n     \"shadowLightIntensity\" : \"0.3\",\n     \"cameraMinVerticalAngle\" : \"-90\",\n     \"cameraMaxVerticalAngle\" : \"90\",\n     \"cameraMinZoom\" : \"1\",\n     \"cameraMaxZoom\" : \"6\",\n     \"cameraPanning\" : \"0.5\",\n     \"cameraBloom\" : \"0\",\n     \"cameraContrast\" : \"1\",\n     \"cameraExposure\" : \"1\",\n     \"fxaaOn\" : \"true\",\n     \"enableSimpleMeasurement\" : \"false\",\n     \"enableCoordinateDisplay\" : \"false\",\n     \"baseUnit\" : \"m\",\n     \"displayUnit\" : \"m\",\n     \"enableARBtn\" : \"false\",\n     \"enableAnimationControl\" : \"false\",\n     \"animationSpeed\" : \"1\",\n     \"animationIdleTime\" : \"5\",\n     \"backgroundIsGradient\" : \"false\",\n     \"backgroundIsColor\" : \"false\",\n     \"gradientBackgroundColor1\" : \"#ffffff\",\n     \"gradientBackgroundColor2\" : \"#aaaaaa\",\n     \"plainBackgroundColor\" : \"#ffffff\",\n     \"environmentName\" : \"studio_small\",\n     \"baseUnits\" : \"m,cm,mm,yd,ft,in\",\n     \"displayUnits\" : \"m,cm,mm,yd,ft,in\"\n}"
+                  description: The viewer configuration. Must be a valid JSON string
+                  example: "{\n     \"renderCanvasCSS\" : \"background:;\",\n    \
+                    \ \"environmentURL\" : \"images/environment.dds\",\n     \"companyLogo\"\
+                    \ : \"data:image/png;base64,iVBORw0KGgoAAAANSUh...kSuQmCC\",\n\
+                    \     \"companyLogoToggle\" : \"true\",\n     \"companyLink\"\
+                    \ : \"https://dgg3d.com\",\n     \"companyLogoCSS\" : \"width:120px;height:71.3004px;background:;\"\
+                    ,\n     \"productLogo\" : \"data:image/png;base64,iVBORw0KGgoAAAANSUh...ASUVORK5CYII=\"\
+                    ,\n     \"productLogoToggle\" : \"true\",\n     \"productLink\"\
+                    \ : \"https://rapidpipeline.com\",\n     \"productLogoCSS\" :\
+                    \ \"width:120px;height:21.4819px;background:;\",\n     \"threeDLogo\"\
+                    \ : \"data:image/png;base64,iVBORw0KGgoAAAANSUhEU...OAAAAAElFTkSuQmCC\"\
+                    ,\n     \"threeDLogoToggle\" : \"true\",\n     \"threeDLogoCSS\"\
+                    \ : \"width:24px;height:24px;background:;\",\n     \"interactiveToolsCSS\"\
+                    \ : \"background:;\",\n     \"skyBoxEnabled\" : \"false\",\n \
+                    \    \"skyBoxBlur\" : \"0\",\n     \"shadowToggle\" : \"false\"\
+                    ,\n     \"shadowOpacity\" : \"0.5\",\n     \"shadowBlur\" : \"\
+                    0\",\n     \"shadowLightIntensity\" : \"0.3\",\n     \"cameraMinVerticalAngle\"\
+                    \ : \"-90\",\n     \"cameraMaxVerticalAngle\" : \"90\",\n    \
+                    \ \"cameraMinZoom\" : \"1\",\n     \"cameraMaxZoom\" : \"6\",\n\
+                    \     \"cameraPanning\" : \"0.5\",\n     \"cameraBloom\" : \"\
+                    0\",\n     \"cameraContrast\" : \"1\",\n     \"cameraExposure\"\
+                    \ : \"1\",\n     \"fxaaOn\" : \"true\",\n     \"enableSimpleMeasurement\"\
+                    \ : \"false\",\n     \"enableCoordinateDisplay\" : \"false\",\n\
+                    \     \"baseUnit\" : \"m\",\n     \"displayUnit\" : \"m\",\n \
+                    \    \"enableARBtn\" : \"false\",\n     \"enableAnimationControl\"\
+                    \ : \"false\",\n     \"animationSpeed\" : \"1\",\n     \"animationIdleTime\"\
+                    \ : \"5\",\n     \"backgroundIsGradient\" : \"false\",\n     \"\
+                    backgroundIsColor\" : \"false\",\n     \"gradientBackgroundColor1\"\
+                    \ : \"#ffffff\",\n     \"gradientBackgroundColor2\" : \"#aaaaaa\"\
+                    ,\n     \"plainBackgroundColor\" : \"#ffffff\",\n     \"environmentName\"\
+                    \ : \"studio_small\",\n     \"baseUnits\" : \"m,cm,mm,yd,ft,in\"\
+                    ,\n     \"displayUnits\" : \"m,cm,mm,yd,ft,in\"\n}"
                   nullable: false
               required:
-                - model_id
-                - name
+              - model_id
+              - name
   /api/v2/embeds/raw:
     post:
-      summary: 'Create Embed from Base Asset'
+      summary: Create Embed from Base Asset
       operationId: createEmbedFromBaseAsset
-      description: "Create an embed from a base asset.\nThe base asset must be in the .glb file format.\nThe webhooks will be called with the 'embed_from_raw_creation' event to notify the user as soon as the embed is created"
+      description: 'Create an embed from a base asset.
+
+        The base asset must be in the .glb file format.
+
+        The webhooks will be called with the ''embed_from_raw_creation'' event to
+        notify the user as soon as the embed is created'
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-                example: "{\n \"message\" : \"Embed creation pending, wait for the webhook call\",\n \"embed_id\": 513,\n \"embed_url\": 'http://api.rapidpipeline.com/viewer?id=iKlCoxprxK',\n}"
-        422:
-          description: 'no glb format'
+                type: object
+                additionalProperties: true
+                properties:
+                  message:
+                    type: string
+                  embed_id:
+                    type: integer
+                  embed_url:
+                    type: string
+              example:
+                message: Embed creation pending, wait for the webhook call
+                embed_id: 513
+                embed_url: http://api.rapidpipeline.com/viewer?id=iKlCoxprxK
+        '422':
+          description: no glb format
           content:
             application/json:
               schema:
                 type: object
                 example:
-                  message: 'Raw model is not in the glb file format'
+                  message: Raw model is not in the glb file format
                 properties:
                   message:
                     type: string
-                    example: 'Raw model is not in the glb file format'
+                    example: Raw model is not in the glb file format
       tags:
-        - Embeds
+      - Embeds
       requestBody:
         required: true
         content:
@@ -1629,35 +1973,65 @@ paths:
               properties:
                 raw_model_id:
                   type: integer
-                  description: 'The id of the raw model'
+                  description: The id of the raw model
                   example: 281
                   nullable: false
                 name:
                   type: string
-                  description: 'The name of your embed'
+                  description: The name of your embed
                   example: '"my embeds name"'
                   nullable: false
                 save_user_theme:
                   type: boolean
-                  description: 'Saves the configurator config'
+                  description: Saves the configurator config
                   example: true
                   nullable: false
                 config:
                   type: string
-                  description: 'The viewer configuration. Must be a valid JSON string'
-                  example: "{\n     \"renderCanvasCSS\" : \"background:;\",\n     \"environmentURL\" : \"images/environment.dds\",\n     \"companyLogo\" : \"data:image/png;base64,iVBORw0KGgoAAAANSUh...kSuQmCC\",\n     \"companyLogoToggle\" : \"true\",\n     \"companyLink\" : \"https://dgg3d.com\",\n     \"companyLogoCSS\" : \"width:120px;height:71.3004px;background:;\",\n     \"productLogo\" : \"data:image/png;base64,iVBORw0KGgoAAAANSUh...ASUVORK5CYII=\",\n     \"productLogoToggle\" : \"true\",\n     \"productLink\" : \"https://rapidpipeline.com\",\n     \"productLogoCSS\" : \"width:120px;height:21.4819px;background:;\",\n     \"threeDLogo\" : \"data:image/png;base64,iVBORw0KGgoAAAANSUhEU...OAAAAAElFTkSuQmCC\",\n     \"threeDLogoToggle\" : \"true\",\n     \"threeDLogoCSS\" : \"width:24px;height:24px;background:;\",\n     \"interactiveToolsCSS\" : \"background:;\",\n     \"skyBoxEnabled\" : \"false\",\n     \"skyBoxBlur\" : \"0\",\n     \"shadowToggle\" : \"false\",\n     \"shadowOpacity\" : \"0.5\",\n     \"shadowBlur\" : \"0\",\n     \"shadowLightIntensity\" : \"0.3\",\n     \"cameraMinVerticalAngle\" : \"-90\",\n     \"cameraMaxVerticalAngle\" : \"90\",\n     \"cameraMinZoom\" : \"1\",\n     \"cameraMaxZoom\" : \"6\",\n     \"cameraPanning\" : \"0.5\",\n     \"cameraBloom\" : \"0\",\n     \"cameraContrast\" : \"1\",\n     \"cameraExposure\" : \"1\",\n     \"fxaaOn\" : \"true\",\n     \"enableSimpleMeasurement\" : \"false\",\n     \"enableCoordinateDisplay\" : \"false\",\n     \"baseUnit\" : \"m\",\n     \"displayUnit\" : \"m\",\n     \"enableARBtn\" : \"false\",\n     \"enableAnimationControl\" : \"false\",\n     \"animationSpeed\" : \"1\",\n     \"animationIdleTime\" : \"5\",\n     \"backgroundIsGradient\" : \"false\",\n     \"backgroundIsColor\" : \"false\",\n     \"gradientBackgroundColor1\" : \"#ffffff\",\n     \"gradientBackgroundColor2\" : \"#aaaaaa\",\n     \"plainBackgroundColor\" : \"#ffffff\",\n     \"environmentName\" : \"studio_small\",\n     \"baseUnits\" : \"m,cm,mm,yd,ft,in\",\n     \"displayUnits\" : \"m,cm,mm,yd,ft,in\"\n}"
+                  description: The viewer configuration. Must be a valid JSON string
+                  example: "{\n     \"renderCanvasCSS\" : \"background:;\",\n    \
+                    \ \"environmentURL\" : \"images/environment.dds\",\n     \"companyLogo\"\
+                    \ : \"data:image/png;base64,iVBORw0KGgoAAAANSUh...kSuQmCC\",\n\
+                    \     \"companyLogoToggle\" : \"true\",\n     \"companyLink\"\
+                    \ : \"https://dgg3d.com\",\n     \"companyLogoCSS\" : \"width:120px;height:71.3004px;background:;\"\
+                    ,\n     \"productLogo\" : \"data:image/png;base64,iVBORw0KGgoAAAANSUh...ASUVORK5CYII=\"\
+                    ,\n     \"productLogoToggle\" : \"true\",\n     \"productLink\"\
+                    \ : \"https://rapidpipeline.com\",\n     \"productLogoCSS\" :\
+                    \ \"width:120px;height:21.4819px;background:;\",\n     \"threeDLogo\"\
+                    \ : \"data:image/png;base64,iVBORw0KGgoAAAANSUhEU...OAAAAAElFTkSuQmCC\"\
+                    ,\n     \"threeDLogoToggle\" : \"true\",\n     \"threeDLogoCSS\"\
+                    \ : \"width:24px;height:24px;background:;\",\n     \"interactiveToolsCSS\"\
+                    \ : \"background:;\",\n     \"skyBoxEnabled\" : \"false\",\n \
+                    \    \"skyBoxBlur\" : \"0\",\n     \"shadowToggle\" : \"false\"\
+                    ,\n     \"shadowOpacity\" : \"0.5\",\n     \"shadowBlur\" : \"\
+                    0\",\n     \"shadowLightIntensity\" : \"0.3\",\n     \"cameraMinVerticalAngle\"\
+                    \ : \"-90\",\n     \"cameraMaxVerticalAngle\" : \"90\",\n    \
+                    \ \"cameraMinZoom\" : \"1\",\n     \"cameraMaxZoom\" : \"6\",\n\
+                    \     \"cameraPanning\" : \"0.5\",\n     \"cameraBloom\" : \"\
+                    0\",\n     \"cameraContrast\" : \"1\",\n     \"cameraExposure\"\
+                    \ : \"1\",\n     \"fxaaOn\" : \"true\",\n     \"enableSimpleMeasurement\"\
+                    \ : \"false\",\n     \"enableCoordinateDisplay\" : \"false\",\n\
+                    \     \"baseUnit\" : \"m\",\n     \"displayUnit\" : \"m\",\n \
+                    \    \"enableARBtn\" : \"false\",\n     \"enableAnimationControl\"\
+                    \ : \"false\",\n     \"animationSpeed\" : \"1\",\n     \"animationIdleTime\"\
+                    \ : \"5\",\n     \"backgroundIsGradient\" : \"false\",\n     \"\
+                    backgroundIsColor\" : \"false\",\n     \"gradientBackgroundColor1\"\
+                    \ : \"#ffffff\",\n     \"gradientBackgroundColor2\" : \"#aaaaaa\"\
+                    ,\n     \"plainBackgroundColor\" : \"#ffffff\",\n     \"environmentName\"\
+                    \ : \"studio_small\",\n     \"baseUnits\" : \"m,cm,mm,yd,ft,in\"\
+                    ,\n     \"displayUnits\" : \"m,cm,mm,yd,ft,in\"\n}"
                   nullable: false
               required:
-                - raw_model_id
-                - name
+              - raw_model_id
+              - name
   /api/v2/preset/create:
     post:
-      summary: 'Create Preset'
+      summary: Create Preset
       operationId: createPreset
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             text/plain:
@@ -1665,7 +2039,7 @@ paths:
                 type: string
                 example: ''
       tags:
-        - Presets
+      - Presets
       requestBody:
         required: true
         content:
@@ -1675,22 +2049,23 @@ paths:
               properties:
                 name:
                   type: string
-                  description: 'The name of the preset'
-                  example: 'name of the new preset'
+                  description: The name of the preset
+                  example: name of the new preset
                   nullable: false
                 description:
                   type: string
-                  description: 'optional A short description of the preset'
-                  example: 'Optimizes for 20k faces and drops textures'
+                  description: optional A short description of the preset
+                  example: Optimizes for 20k faces and drops textures
                   nullable: false
                 rapidCompactCoreVersion:
                   type: string
-                  description: 'The minimum version of RapidCompact for the preset'
+                  description: The minimum version of RapidCompact for the preset
                   example: 6.1.1
                   nullable: false
                 config:
                   type: object
-                  description: 'The config of the optimizer as a json object complying with the [3D Processor Schema](https://docs.rapidpipeline.com/docs/componentDocs/3dProcessingSchemaSettings/processor-schema-overview)'
+                  description: The config of the optimizer as a json object complying
+                    with the [3D Processor Schema](https://docs.rapidpipeline.com/docs/componentDocs/3dProcessingSchemaSettings/processor-schema-overview)
                   example:
                     schema: '2.5'
                     limits:
@@ -1716,28 +2091,27 @@ paths:
                         bakeAOMap: false
                     compressionAndExport:
                       fileExports:
-                        -
-                          fileType: glb
-                          meshCompressionMethod: none
-                          customScaling: 1
-                          textureFormat:
-                            baseColor: auto
-                            emissive: auto
-                            normal: png
-                            orm: auto
+                      - fileType: glb
+                        meshCompressionMethod: none
+                        customScaling: 1
+                        textureFormat:
+                          baseColor: auto
+                          emissive: auto
+                          normal: png
+                          orm: auto
                   nullable: false
-                  properties: {  }
+                  properties: {}
               required:
-                - name
-                - config
+              - name
+              - config
   /api/v2/preset/update:
     patch:
-      summary: 'Update Preset'
+      summary: Update Preset
       operationId: updatePreset
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             text/plain:
@@ -1745,7 +2119,7 @@ paths:
                 type: string
                 example: ''
       tags:
-        - Presets
+      - Presets
       requestBody:
         required: true
         content:
@@ -1755,17 +2129,18 @@ paths:
               properties:
                 id:
                   type: integer
-                  description: 'The id of the preset'
+                  description: The id of the preset
                   example: 42
                   nullable: false
                 name:
                   type: string
-                  description: 'The name of the preset'
-                  example: 'name of the new preset'
+                  description: The name of the preset
+                  example: name of the new preset
                   nullable: false
                 config:
                   type: object
-                  description: 'The config of the optimizer as a json object complying with the [API Optimize Schema](https://rapidpipeline.com/doc)'
+                  description: The config of the optimizer as a json object complying
+                    with the [API Optimize Schema](https://rapidpipeline.com/doc)
                   example:
                     import:
                       general:
@@ -1784,62 +2159,81 @@ paths:
                         morphTargets: false
                         unusedUVs: false
                     export:
-                      -
-                        fileName: ''
-                        textureMapFilePrefix: ''
-                        discard: []
-                        format:
-                          gltf:
-                            pbrMaterial: []
+                    - fileName: ''
+                      textureMapFilePrefix: ''
+                      discard: []
+                      format:
+                        gltf:
+                          pbrMaterial: []
                   nullable: false
-                  properties: {  }
+                  properties: {}
               required:
-                - id
-                - name
-                - config
+              - id
+              - name
+              - config
   /api/v2/preset/factory:
     get:
-      summary: 'Get Factory Presets'
+      summary: Get Factory Presets
       operationId: getFactoryPresets
-      description: "Returns all Factory Presets or those that match the search query.\n\nFactory Presets are provided by RapidPipeline\n\nA factory presets describes a optimization setting for different applications e.g. Lens Studio, Game Engines (Unreal, Unity) and devices (e.g. Hololens). You can use the returned id when using the Optimize endpoint"
+      description: 'Returns all Factory Presets or those that match the search query.
+
+
+        Factory Presets are provided by RapidPipeline
+
+
+        A factory presets describes a optimization setting for different applications
+        e.g. Lens Studio, Game Engines (Unreal, Unity) and devices (e.g. Hololens).
+        You can use the returned id when using the Optimize endpoint'
       parameters:
-        -
-          in: query
-          name: q
-          description: 'Optional parameter to search for presets by name or description'
+      - in: query
+        name: q
+        description: Optional parameter to search for presets by name or description
+        example: yourSearchString
+        required: false
+        schema:
+          type: string
+          description: Optional parameter to search for presets by name or description
           example: yourSearchString
-          required: false
-          schema:
-            type: string
-            description: 'Optional parameter to search for presets by name or description'
-            example: yourSearchString
-            nullable: false
+          nullable: false
       responses:
-        200:
+        '200':
           description: success
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-                example: "[\n  {\n    \"id\": 1,\n    \"name\": \"Spark AR Low Res\",\n    \"config\": \"{\\\"workflowSettings\\\":{\\\"targetMeshResolution\\\":{\\\"faceCount\\\":15000},\\\"targetTextureResolution\\\":{\\\"baseColor\\\":1024,\\\"emissive\\\":1024,\\\"normal\\\":1024,\\\"orm\\\":1024}},\\\"assetSimplification\\\":{\\\"meshDecimation\\\":{\\\"method\\\":\\\"rebake\\\"},\\\"topologySettings\\\":{\\\"vertexMergingDistance\\\":0.005,\\\"meshDensityEqualization\\\":0,\\\"boundaryPreservationFactor\\\":0.5},\\\"uvAndAtlasSettings\\\":{\\\"uvStretchTolerance\\\":0},\\\"materialAndTextureBaking\\\":{\\\"bakingQuality\\\":\\\"low\\\",\\\"bakeNormalMap\\\":true,\\\"bakeAOMap\\\":false}},\\\"compressionAndExport\\\":{\\\"fileExports\\\":[{\\\"fileType\\\":\\\"glb\\\",\\\"meshCompressionMethod\\\":\\\"none\\\",\\\"customScaling\\\":1,\\\"textureFormat\\\":{\\\"baseColor\\\":\\\"jpg\\\",\\\"emissive\\\":\\\"jpg\\\",\\\"normal\\\":\\\"jpg\\\",\\\"orm\\\":\\\"jpg\\\"}}]}}\"\n  },\n]"
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    config:
+                      type: string
+              example:
+              - id: 1
+                name: Spark AR Low Res
       tags:
-        - Presets
+      - Presets
   /api/v2/preset/rpdx:
     post:
-      summary: 'Convert Preset'
+      summary: Convert Preset
       operationId: convertPreset
-      description: 'Convert a preset in API format to CLI format and CLI commands. The endpoint will return a zip file containing the requested files.'
+      description: Convert a preset in API format to CLI format and CLI commands.
+        The endpoint will return a zip file containing the requested files.
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             text/plain:
               schema:
                 type: string
-                example: '<Zip File> Streamed Response'
+                example: <Zip File> Streamed Response
       tags:
-        - Presets
+      - Presets
       requestBody:
         required: true
         content:
@@ -1849,7 +2243,8 @@ paths:
               properties:
                 config:
                   type: object
-                  description: 'The config of the optimizer in API format as a json object complying with the [3D Processor Schema](https://docs.rapidpipeline.com/docs/componentDocs/3dProcessingSchemaSettings/processor-schema-overview)'
+                  description: The config of the optimizer in API format as a json
+                    object complying with the [3D Processor Schema](https://docs.rapidpipeline.com/docs/componentDocs/3dProcessingSchemaSettings/processor-schema-overview)
                   example:
                     schema: '2.5'
                     limits:
@@ -1875,93 +2270,107 @@ paths:
                         bakeAOMap: false
                     compressionAndExport:
                       fileExports:
-                        -
-                          fileType: glb
-                          meshCompressionMethod: none
-                          customScaling: 1
-                          textureFormat:
-                            baseColor: auto
-                            emissive: auto
-                            normal: png
-                            orm: auto
+                      - fileType: glb
+                        meshCompressionMethod: none
+                        customScaling: 1
+                        textureFormat:
+                          baseColor: auto
+                          emissive: auto
+                          normal: png
+                          orm: auto
                   nullable: false
-                  properties: {  }
+                  properties: {}
               required:
-                - config
-  '/api/v2/preset/rpdx/{id}':
+              - config
+  /api/v2/preset/rpdx/{id}:
     get:
-      summary: 'Get Preset in CLI Format'
+      summary: Get Preset in CLI Format
       operationId: getPresetInCLIFormat
-      description: 'The endpoint will return a zip file containing the requested files'
+      description: The endpoint will return a zip file containing the requested files
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             text/plain:
               schema:
                 type: string
-                example: '<Zip File> Streamed Response'
+                example: <Zip File> Streamed Response
       tags:
-        - Presets
+      - Presets
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the preset'
-        example: 281
-        required: true
-        schema:
-          type: integer
-  '/api/v2/preset/{id}/download':
+    - in: path
+      name: id
+      description: The id of the preset
+      example: 281
+      required: true
+      schema:
+        type: integer
+  /api/v2/preset/{id}/download:
     get:
-      summary: 'Download Preset'
+      summary: Download Preset
       operationId: downloadPreset
-      description: 'Downloads a preset as zip file which contains both API and CLI formats.'
+      description: Downloads a preset as zip file which contains both API and CLI
+        formats.
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             text/plain:
               schema:
                 type: string
-                example: '<Zip File> Streamed Response'
+                example: <Zip File> Streamed Response
       tags:
-        - Presets
+      - Presets
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the preset'
-        example: 281
-        required: true
-        schema:
-          type: integer
+    - in: path
+      name: id
+      description: The id of the preset
+      example: 281
+      required: true
+      schema:
+        type: integer
   /api/v2/preset/categories:
     get:
-      summary: 'Get Preset Categories'
+      summary: Get Preset Categories
       operationId: getPresetCategories
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-                example: "[\n  {\n    \"id\": 1,\n    \"name\": \"General\",\n    \"slug\": \"general\",\n    \"description\": \"General presets description\"\n  },\n {\n    \"id\": 2,\n    \"name\": \"Application\",\n    \"slug\": \"application\",\n    \"description\": \"Application presets description\"\n  },\n]"
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    slug:
+                      type: string
+                    description:
+                      type: string
+              example:
+              - id: 1
+                name: General
+                slug: general
+                description: General presets description
       tags:
-        - Presets
-  '/api/v2/preset/{id}':
+      - Presets
+  /api/v2/preset/{id}:
     get:
-      summary: 'Get Preset'
+      summary: Get Preset
       operationId: getPreset
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             application/json:
@@ -1969,7 +2378,7 @@ paths:
                 type: object
                 example:
                   id: 11
-                  name: 'preset 2'
+                  name: preset 2
                   config:
                     schema: '2.5'
                     limits:
@@ -1995,15 +2404,14 @@ paths:
                         bakeAOMap: false
                     compressionAndExport:
                       fileExports:
-                        -
-                          fileType: glb
-                          meshCompressionMethod: none
-                          customScaling: 1
-                          textureFormat:
-                            baseColor: auto
-                            emissive: auto
-                            normal: png
-                            orm: auto
+                      - fileType: glb
+                        meshCompressionMethod: none
+                        customScaling: 1
+                        textureFormat:
+                          baseColor: auto
+                          emissive: auto
+                          normal: png
+                          orm: auto
                   rpdx_version: 6.1.1
                   user_id: 328
                   created_at: '2021-04-22T09:11:30.000000Z'
@@ -2014,7 +2422,7 @@ paths:
                     example: 11
                   name:
                     type: string
-                    example: 'preset 2'
+                    example: preset 2
                   config:
                     type: object
                     properties:
@@ -2090,15 +2498,14 @@ paths:
                           fileExports:
                             type: array
                             example:
-                              -
-                                fileType: glb
-                                meshCompressionMethod: none
-                                customScaling: 1
-                                textureFormat:
-                                  baseColor: auto
-                                  emissive: auto
-                                  normal: png
-                                  orm: auto
+                            - fileType: glb
+                              meshCompressionMethod: none
+                              customScaling: 1
+                              textureFormat:
+                                baseColor: auto
+                                emissive: auto
+                                normal: png
+                                orm: auto
                             items:
                               type: object
                               properties:
@@ -2139,14 +2546,14 @@ paths:
                     type: string
                     example: '2021-04-22T09:11:30.000000Z'
       tags:
-        - Presets
+      - Presets
     delete:
-      summary: 'Delete Preset'
+      summary: Delete Preset
       operationId: deletePreset
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             text/plain:
@@ -2154,35 +2561,34 @@ paths:
                 type: string
                 example: ''
       tags:
-        - Presets
+      - Presets
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the preset'
-        example: 281
-        required: true
-        schema:
-          type: integer
+    - in: path
+      name: id
+      description: The id of the preset
+      example: 281
+      required: true
+      schema:
+        type: integer
   /api/v2/preset:
     get:
-      summary: 'Get custom Presets'
+      summary: Get custom Presets
       operationId: getCustomPresets
-      description: 'Returns all your custom Presets or those that match the search query.'
+      description: Returns all your custom Presets or those that match the search
+        query.
       parameters:
-        -
-          in: query
-          name: q
-          description: 'Optional parameter to search for presets by name or description'
+      - in: query
+        name: q
+        description: Optional parameter to search for presets by name or description
+        example: yourSearchString
+        required: false
+        schema:
+          type: string
+          description: Optional parameter to search for presets by name or description
           example: yourSearchString
-          required: false
-          schema:
-            type: string
-            description: 'Optional parameter to search for presets by name or description'
-            example: yourSearchString
-            nullable: false
+          nullable: false
       responses:
-        200:
+        '200':
           description: success
           content:
             application/json:
@@ -2191,75 +2597,181 @@ paths:
                 items:
                   type: object
                 example:
-                  -
-                    id: 11
-                    name: 'preset 2'
-                    config: '{"sceneManipulation":{"rotateZUp":false,"centerModel":false,"removeInvisibleGeometry":false,"discardAnimations":false,"removeSmallFeatures":{"removalPercentage":0}},"assetSimplification":{"meshDecimation":{"method":"rebake"},"topologySettings":{"vertexMergingDistance":0.005,"meshDensityEqualization":0,"boundaryPreservationFactor":0.5,"preserveTopology":false},"uvAndAtlasSettings":{"uvStretchTolerance":0},"materialAndTextureBaking":{"bakingQuality":"medium","bakeNormalMap":true,"bakeAOMap":true}},"compressionAndExport":{"fileExports":[{"fileType":"glb","meshCompressionMethod":"none","customScaling":1,"textureFormat":{"baseColor":"auto","emissive":"auto","normal":"auto","orm":"auto"}},{"fileType":"usdz","meshCompressionMethod":"none","customScaling":1,"textureFormat":{"baseColor":"auto","emissive":"auto","normal":"auto","orm":"auto"}},{"fileType":"obj","meshCompressionMethod":"none","customScaling":1,"textureFormat":{"baseColor":"auto","emissive":"auto","normal":"auto","orm":"auto"}}]},"schema":"2.5","limits":{"faces":{"percentage":50},"textures":{"baseColor":2048,"emissive":2048,"normal":2048,"orm":2048}}}'
-                    rpdx_version: 6.1.1
-                    user_id: 328
-                    created_at: '2023-01-22T09:11:30.000000Z'
-                    updated_at: '2023-01-22T09:11:30.000000Z'
-                    description: ''
-                    meta: '{"filename": {"useId": false, "useSuffix": null, "usePresetName": false}}'
+                - id: 11
+                  name: preset 2
+                  config: '{"sceneManipulation":{"rotateZUp":false,"centerModel":false,"removeInvisibleGeometry":false,"discardAnimations":false,"removeSmallFeatures":{"removalPercentage":0}},"assetSimplification":{"meshDecimation":{"method":"rebake"},"topologySettings":{"vertexMergingDistance":0.005,"meshDensityEqualization":0,"boundaryPreservationFactor":0.5,"preserveTopology":false},"uvAndAtlasSettings":{"uvStretchTolerance":0},"materialAndTextureBaking":{"bakingQuality":"medium","bakeNormalMap":true,"bakeAOMap":true}},"compressionAndExport":{"fileExports":[{"fileType":"glb","meshCompressionMethod":"none","customScaling":1,"textureFormat":{"baseColor":"auto","emissive":"auto","normal":"auto","orm":"auto"}},{"fileType":"usdz","meshCompressionMethod":"none","customScaling":1,"textureFormat":{"baseColor":"auto","emissive":"auto","normal":"auto","orm":"auto"}},{"fileType":"obj","meshCompressionMethod":"none","customScaling":1,"textureFormat":{"baseColor":"auto","emissive":"auto","normal":"auto","orm":"auto"}}]},"schema":"2.5","limits":{"faces":{"percentage":50},"textures":{"baseColor":2048,"emissive":2048,"normal":2048,"orm":2048}}}'
+                  rpdx_version: 6.1.1
+                  user_id: 328
+                  created_at: '2023-01-22T09:11:30.000000Z'
+                  updated_at: '2023-01-22T09:11:30.000000Z'
+                  description: ''
+                  meta: '{"filename": {"useId": false, "useSuffix": null, "usePresetName":
+                    false}}'
       tags:
-        - Presets
+      - Presets
   /api/v2/rapidmodel:
     get:
-      summary: 'Get Rapid Models'
+      summary: Get Rapid Models
       operationId: getRapidModels
-      description: 'Paginated response of your rapid models. Search for rapid models by name or tag'
+      description: Paginated response of your rapid models. Search for rapid models
+        by name or tag. Omit the optional query parameters to list all rapid models.
       parameters:
-        -
-          in: query
-          name: q
-          description: 'Optional. Search term to filter rapid models by name or tag.'
+      - in: query
+        name: q
+        description: Optional. Search term to filter rapid models by name or tag.
+          Omit to return all rapid models.
+        example: '"Low-Poly"'
+        required: false
+        schema:
+          type: string
+          description: Optional. Search term to filter rapid models by name or tag.
           example: '"Low-Poly"'
-          required: false
-          schema:
-            type: string
-            description: 'Optional. Search term to filter rapid models by name or tag.'
-            example: '"Low-Poly"'
-            nullable: false
-        -
-          in: query
-          name: page
-          description: 'Optional. Page number for pagination. Defaults to 1. If the requested page exceeds the maximum available (based on total assets and items per page), the last available page will be returned.'
+          nullable: false
+      - in: query
+        name: page
+        description: Optional. Page number for pagination. Defaults to 1. If the requested
+          page exceeds the maximum available (based on total assets and items per
+          page), the last available page will be returned.
+        example: 3
+        required: false
+        schema:
+          type: integer
+          description: Optional. Page number for pagination. Defaults to 1. If the
+            requested page exceeds the maximum available (based on total assets and
+            items per page), the last available page will be returned.
           example: 3
-          required: false
-          schema:
-            type: integer
-            description: 'Optional. Page number for pagination. Defaults to 1. If the requested page exceeds the maximum available (based on total assets and items per page), the last available page will be returned.'
-            example: 3
-            nullable: false
-        -
-          in: query
-          name: itemsPerPage
-          description: 'Optional. Number of items per page. Defaults to 12. Maximum is 50.'
+          nullable: false
+      - in: query
+        name: itemsPerPage
+        description: Optional. Number of items per page. Defaults to 12. Maximum is
+          50.
+        example: 25
+        required: false
+        schema:
+          type: integer
+          description: Optional. Number of items per page. Defaults to 12. Maximum
+            is 50.
           example: 25
-          required: false
-          schema:
-            type: integer
-            description: 'Optional. Number of items per page. Defaults to 12. Maximum is 50.'
-            example: 25
-            nullable: false
+          nullable: false
       responses:
-        200:
+        '200':
           description: success
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-                example: "{\n   \"data\": [\n       {\n           \"id\": 1,\n           \"name\": \"teapot \",\n           \"optimization_status\": \"done\",\n           \"created_at\": \"2022-05-24T16:28:56+02:00\",\n           \"updated_at\": \"2022-05-24T16:29:11+02:00\",\n           \"processing_step\": \"Done\",\n           \"external\": false,\n           \"rapid_compact_core_version\": \"6.1.1\",\n           \"tags\": [\n               {\n                   \"id\": 1,\n                   \"name\": \"Low-Poly\",\n                   \"created_at\": \"2022-05-24 15:06:03\",\n                   \"updated_at\": \"2022-05-24 15:06:03\",\n                   \"rapid_id\": 1\n               },\n           ],\n           \"export_name\": \"teapot_1\",\n           \"uuid\": \"f26cf299-c8df-4d4d-9eef-3f8e87d882b7\",\n           \"accepted\": false,\n           \"meta\": {\n               \"size\": 665168,\n               \"exportSize\": 1495763\n           },\n           \"origin\": \"\",\n           \"optimization_formats\": \"[...]\",\n           \"thumbnail\": {\n               \"first\": \"signed url\",\n               \"turntable\": \"signed url\"\n           },\n           \"model\": {\n               \"rootUrl\": \"rootURL\",\n               \"fileName\": \"fileName\"\n           },\n           \"rpd_info\": \"signed url\",\n           \"rpd_warnings\": \"signed url\",\n           \"downloads\": {\n               \"usdz\": \"signed url\",\n               \"glb\": \"signed url\",\n               \"all\": {\n                   \"rapid.glb\": \"signed url\",\n                   \"rapid.usdz\": \"signed url\"\n               }\n           }\n       }\n   ],\n   \"links\": {\n       \"first\": \"https://url/api/v2/rapidmodel?page=1\",\n       \"last\": \"https://url/api/v2/rapidmodel?page=1\",\n       \"prev\": null,\n       \"next\": null\n   },\n   \"meta\": {\n       \"current_page\": 1,\n       \"from\": 1,\n       \"last_page\": 1,\n       \"links\": [\n           {\n               \"url\": null,\n               \"label\": \"&laquo; Previous\",\n               \"active\": false\n           },\n           {\n               \"url\": \"https://url/api/v2/rapidmodel?page=1\",\n               \"label\": \"1\",\n               \"active\": true\n           },\n           {\n               \"url\": null,\n               \"label\": \"Next &raquo;\",\n               \"active\": false\n           }\n       ],\n       \"path\": \"https://url/api/v2/rapidmodel\",\n       \"per_page\": 12,\n       \"to\": 1,\n       \"total\": 1\n   }\n}"
+                type: object
+                additionalProperties: true
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        optimization_status:
+                          type: string
+                        created_at:
+                          type: string
+                        updated_at:
+                          type: string
+                        processing_step:
+                          type: string
+                        external:
+                          type: boolean
+                        rapid_compact_core_version:
+                          type: string
+                        tags:
+                          type: array
+                          items:
+                            type: object
+                            additionalProperties: true
+                        export_name:
+                          type: string
+                        uuid:
+                          type: string
+                        accepted:
+                          type: boolean
+                        meta:
+                          type: object
+                          additionalProperties: true
+                        origin:
+                          type: string
+                        optimization_formats:
+                          type: string
+                        thumbnail:
+                          type: object
+                          additionalProperties: true
+                        model:
+                          type: object
+                          additionalProperties: true
+                        rpd_info:
+                          type: string
+                        rpd_warnings:
+                          type: string
+                        downloads:
+                          type: object
+                          additionalProperties: true
+                  links:
+                    type: object
+                    additionalProperties: true
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                      next:
+                        type: string
+                  meta:
+                    type: object
+                    additionalProperties: true
+                    properties:
+                      current_page:
+                        type: integer
+                      from:
+                        type: integer
+                      last_page:
+                        type: integer
+                      per_page:
+                        type: integer
+                      to:
+                        type: integer
+                      total:
+                        type: integer
+                      path:
+                        type: string
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties: true
+                          properties:
+                            url:
+                              type: string
+                            label:
+                              type: string
+                            active:
+                              type: boolean
+              example:
+                data:
+                - id: 1
+                  name: teapot
+                  optimization_status: done
       tags:
-        - 'Rapid Model'
-  '/api/v2/rapidmodel/{id}':
+      - Rapid Model
+  /api/v2/rapidmodel/{id}:
     get:
-      summary: 'Get Rapid Model'
+      summary: Get Rapid Model
       operationId: getRapidModel
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: ''
           content:
             application/json:
@@ -2276,47 +2788,43 @@ paths:
                     external: false
                     rapid_compact_core_version: 6.1.1
                     tags:
-                      -
-                        id: 377
-                        name: 'Preserve UVs'
-                        created_at: '2024-02-15 18:05:36+00'
-                        updated_at: '2024-02-15 18:05:36+00'
-                        rapid_id: 635
+                    - id: 377
+                      name: Preserve UVs
+                      created_at: '2024-02-15 18:05:36+00'
+                      updated_at: '2024-02-15 18:05:36+00'
+                      rapid_id: 635
                     export_name: null
                     uuid: d8316d1f-3c7d-4777-b72e-c760064f9d08
                     accepted: false
                     meta:
                       size: 573420
                       qc:
-                        -
-                          fbx:
-                            maxScore: 75.120366363435
-                            avgScore: 53.225355263455
-                        -
-                          glb:
-                            maxScore: 75.121853362552
-                            avgScore: 53.240147627865
-                        -
-                          usdz:
-                            maxScore: 75.120633378757
-                            avgScore: 53.225370174429
+                      - fbx:
+                          maxScore: 75.120366363435
+                          avgScore: 53.225355263455
+                      - glb:
+                          maxScore: 75.121853362552
+                          avgScore: 53.240147627865
+                      - usdz:
+                          maxScore: 75.120633378757
+                          avgScore: 53.225370174429
                       exportSize: 1029548
                     origin: ''
                     optimization_formats: '[...]'
                     thumbnail:
-                      first: 'signed url for the thumbnail'
+                      first: signed url for the thumbnail
                       turntable:
-                        rapid.glb: 'signed url for theturntable'
+                        rapid.glb: signed url for theturntable
                     model:
-                      rootUrl: 's3 link'
-                      fileName: 'rapid.glb?signed'
-                    rpd_info: 'signed url for rpd_info.json'
-                    rpd_warnings: 'signed url for the warning.log'
-                    metrics: 'signed url for the metrics.json'
+                      rootUrl: s3 link
+                      fileName: rapid.glb?signed
+                    rpd_info: signed url for rpd_info.json
+                    rpd_warnings: signed url for the warning.log
+                    metrics: signed url for the metrics.json
                     downloads:
-                      glb: 'signed url for the .glb'
+                      glb: signed url for the .glb
                       all:
-                        rapid.glb: 'signed url for the .glb'
+                        rapid.glb: signed url for the .glb
                 properties:
                   data:
                     type: object
@@ -2348,12 +2856,11 @@ paths:
                       tags:
                         type: array
                         example:
-                          -
-                            id: 377
-                            name: 'Preserve UVs'
-                            created_at: '2024-02-15 18:05:36+00'
-                            updated_at: '2024-02-15 18:05:36+00'
-                            rapid_id: 635
+                        - id: 377
+                          name: Preserve UVs
+                          created_at: '2024-02-15 18:05:36+00'
+                          updated_at: '2024-02-15 18:05:36+00'
+                          rapid_id: 635
                         items:
                           type: object
                           properties:
@@ -2362,7 +2869,7 @@ paths:
                               example: 377
                             name:
                               type: string
-                              example: 'Preserve UVs'
+                              example: Preserve UVs
                             created_at:
                               type: string
                               example: '2024-02-15 18:05:36+00'
@@ -2375,6 +2882,7 @@ paths:
                       export_name:
                         type: string
                         example: null
+                        nullable: true
                       uuid:
                         type: string
                         example: d8316d1f-3c7d-4777-b72e-c760064f9d08
@@ -2390,18 +2898,15 @@ paths:
                           qc:
                             type: array
                             example:
-                              -
-                                fbx:
-                                  maxScore: 75.120366363435
-                                  avgScore: 53.225355263455
-                              -
-                                glb:
-                                  maxScore: 75.121853362552
-                                  avgScore: 53.240147627865
-                              -
-                                usdz:
-                                  maxScore: 75.120633378757
-                                  avgScore: 53.225370174429
+                            - fbx:
+                                maxScore: 75.120366363435
+                                avgScore: 53.225355263455
+                            - glb:
+                                maxScore: 75.121853362552
+                                avgScore: 53.240147627865
+                            - usdz:
+                                maxScore: 75.120633378757
+                                avgScore: 53.225370174429
                             items:
                               type: object
                               properties:
@@ -2428,52 +2933,52 @@ paths:
                         properties:
                           first:
                             type: string
-                            example: 'signed url for the thumbnail'
+                            example: signed url for the thumbnail
                           turntable:
                             type: object
                             properties:
                               rapid.glb:
                                 type: string
-                                example: 'signed url for theturntable'
+                                example: signed url for theturntable
                       model:
                         type: object
                         properties:
                           rootUrl:
                             type: string
-                            example: 's3 link'
+                            example: s3 link
                           fileName:
                             type: string
-                            example: 'rapid.glb?signed'
+                            example: rapid.glb?signed
                       rpd_info:
                         type: string
-                        example: 'signed url for rpd_info.json'
+                        example: signed url for rpd_info.json
                       rpd_warnings:
                         type: string
-                        example: 'signed url for the warning.log'
+                        example: signed url for the warning.log
                       metrics:
                         type: string
-                        example: 'signed url for the metrics.json'
+                        example: signed url for the metrics.json
                       downloads:
                         type: object
                         properties:
                           glb:
                             type: string
-                            example: 'signed url for the .glb'
+                            example: signed url for the .glb
                           all:
                             type: object
                             properties:
                               rapid.glb:
                                 type: string
-                                example: 'signed url for the .glb'
+                                example: signed url for the .glb
       tags:
-        - 'Rapid Model'
+      - Rapid Model
     delete:
-      summary: 'Delete Rapid Model'
+      summary: Delete Rapid Model
       operationId: deleteRapidModel
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             text/plain:
@@ -2481,14 +2986,14 @@ paths:
                 type: string
                 example: ''
       tags:
-        - 'Rapid Model'
+      - Rapid Model
     put:
-      summary: 'Add Tags to a Rapid Model'
+      summary: Add Tags to a Rapid Model
       operationId: addTagsToARapidModel
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             text/plain:
@@ -2496,7 +3001,7 @@ paths:
                 type: string
                 example: ''
       tags:
-        - 'Rapid Model'
+      - Rapid Model
       requestBody:
         required: true
         content:
@@ -2506,31 +3011,34 @@ paths:
               properties:
                 tags:
                   type: array
-                  description: 'A list of tags that will be added to the rapid model'
+                  description: A list of tags that will be added to the rapid model
                   example:
-                    - chair
-                    - brown
+                  - chair
+                  - brown
                   items:
                     type: string
               required:
-                - tags
+              - tags
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the rapid model'
-        example: 635
-        required: true
-        schema:
-          type: integer
-  '/api/v2/rapidmodel/{id}/exports':
+    - in: path
+      name: id
+      description: The id of the rapid model
+      example: 635
+      required: true
+      schema:
+        type: integer
+  /api/v2/rapidmodel/{id}/exports:
     get:
-      summary: 'Get Export Infos'
+      summary: Get Export Infos
       operationId: getExportInfos
-      description: "Calling this endpoint return a list of links to download the exports and their respective infos\n\nPlease note that the export infos are generated only for glb and gltf formats"
+      description: 'Calling this endpoint return a list of links to download the exports
+        and their respective infos
+
+
+        Please note that the export infos are generated only for glb and gltf formats'
       parameters: []
       responses:
-        200:
+        '200':
           description: ''
           content:
             application/json:
@@ -2539,18 +3047,17 @@ paths:
                 example:
                   data:
                     rapid.glb:
-                      download: 'signed s3 link to rapid.glb'
+                      download: signed s3 link to rapid.glb
                       info:
                         images:
-                          -
-                            channels: 3
-                            compressedByteSize: 310996
-                            height: 2048
-                            mimetype: image/jpeg
-                            slot: normal
-                            width: 2048
+                        - channels: 3
+                          compressedByteSize: 310996
+                          height: 2048
+                          mimetype: image/jpeg
+                          slot: normal
+                          width: 2048
                     rapid.usdz:
-                      download: 'link to rapid.usdz'
+                      download: link to rapid.usdz
                       info: null
                 properties:
                   data:
@@ -2561,20 +3068,19 @@ paths:
                         properties:
                           download:
                             type: string
-                            example: 'signed s3 link to rapid.glb'
+                            example: signed s3 link to rapid.glb
                           info:
                             type: object
                             properties:
                               images:
                                 type: array
                                 example:
-                                  -
-                                    channels: 3
-                                    compressedByteSize: 310996
-                                    height: 2048
-                                    mimetype: image/jpeg
-                                    slot: normal
-                                    width: 2048
+                                - channels: 3
+                                  compressedByteSize: 310996
+                                  height: 2048
+                                  mimetype: image/jpeg
+                                  slot: normal
+                                  width: 2048
                                 items:
                                   type: object
                                   properties:
@@ -2601,29 +3107,29 @@ paths:
                         properties:
                           download:
                             type: string
-                            example: 'link to rapid.usdz'
+                            example: link to rapid.usdz
                           info:
                             type: string
                             example: null
+                            nullable: true
       tags:
-        - 'Rapid Model'
+      - Rapid Model
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the rapid model'
-        example: 695
-        required: true
-        schema:
-          type: integer
-  '/api/v2/rapidmodel/{id}/tags/{tagId}':
+    - in: path
+      name: id
+      description: The id of the rapid model
+      example: 695
+      required: true
+      schema:
+        type: integer
+  /api/v2/rapidmodel/{id}/tags/{tagId}:
     delete:
-      summary: 'Delete Tag of a Rapid Model'
+      summary: Delete Tag of a Rapid Model
       operationId: deleteTagOfARapidModel
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             text/plain:
@@ -2631,71 +3137,133 @@ paths:
                 type: string
                 example: ''
       tags:
-        - 'Rapid Model'
+      - Rapid Model
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the base asset'
-        example: 281
-        required: true
-        schema:
-          type: integer
-      -
-        in: path
-        name: tagId
-        description: 'The id of the tag that will be deleted'
-        example: 2
-        required: true
-        schema:
-          type: integer
-  '/api/v2/rapidmodel/{id}/download/preset':
+    - in: path
+      name: id
+      description: The id of the base asset
+      example: 281
+      required: true
+      schema:
+        type: integer
+    - in: path
+      name: tagId
+      description: The id of the tag that will be deleted
+      example: 2
+      required: true
+      schema:
+        type: integer
+  /api/v2/rapidmodel/{id}/download/preset:
     get:
-      summary: 'Download used Preset from Rapid Model'
+      summary: Download used Preset from Rapid Model
       operationId: downloadUsedPresetFromRapidModel
-      description: "Downloads a preset as zip file which contains API and CLI formats\n\nOnly available for Rapidmodels that were optimized after 2023-03"
+      description: 'Downloads a preset as zip file which contains API and CLI formats
+
+
+        Only available for Rapidmodels that were optimized after 2023-03'
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             text/plain:
               schema:
                 type: string
-                example: '<Zip File> Streamed Response'
-        404:
+                example: <Zip File> Streamed Response
+        '404':
           description: error
           content:
             text/plain:
               schema:
                 type: string
-                example: 'Only available for Rapidmodels that were optimized after 2023-03'
+                example: Only available for Rapidmodels that were optimized after
+                  2023-03
       tags:
-        - 'Rapid Model'
+      - Rapid Model
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the preset'
-        example: 281
-        required: true
-        schema:
-          type: integer
-  '/api/v2/rapidmodel/{id}/renders':
+    - in: path
+      name: id
+      description: The id of the preset
+      example: 281
+      required: true
+      schema:
+        type: integer
+  /api/v2/rapidmodel/{id}/renders:
     get:
-      summary: 'Get QC render files for a rapid model'
+      summary: Get QC render files for a rapid model
       operationId: getQCRenderFilesForARapidModel
-      description: "Returns hash signed links for the quality control images generated after optimization.\n\nThe keys of the images are built with the following reasoning:\n`<format>-<source of the image>-<name of the image>.png`\n\n<format> refers to the 3D output format of the optimization\n<source of the image> can be either 'comparison' or 'original'\n\nIn case the image depicts the differences between the input asset and its comparison renders,\nits key will contain a __diff suffix. References to the renders of the original raw model are also included.\n\nWith that said, the keys of the images for an optimization that generated a glb output will be:\n- \"glb-back.png\"\n- \"glb-bottom.png\"\n- \"glb-front.png\"\n- \"glb-left.png\"\n- \"glb-right.png\"\n- \"glb-top.png\"\n- \"glb-back__diff.png\"\n- \"glb-bottom__diff.png\"\n- \"glb-front__diff.png\"\n- \"glb-left__diff.png\"\n- \"glb-right__diff.png\"\n- \"glb-top__diff.png\"\n- \"original-back.png\"\n- \"original-bottom.png\"\n- \"original-front.png\"\n- \"original-left.png\"\n- \"original-right.png\"\n- \"original-top.png\"\n\nOnly available for Base Assets that were optimized after 2024-07"
+      description: 'Returns hash signed links for the quality control images generated
+        after optimization.
+
+
+        The keys of the images are built with the following reasoning:
+
+        `<format>-<source of the image>-<name of the image>.png`
+
+
+        <format> refers to the 3D output format of the optimization
+
+        <source of the image> can be either ''comparison'' or ''original''
+
+
+        In case the image depicts the differences between the input asset and its
+        comparison renders,
+
+        its key will contain a __diff suffix. References to the renders of the original
+        raw model are also included.
+
+
+        With that said, the keys of the images for an optimization that generated
+        a glb output will be:
+
+        - "glb-back.png"
+
+        - "glb-bottom.png"
+
+        - "glb-front.png"
+
+        - "glb-left.png"
+
+        - "glb-right.png"
+
+        - "glb-top.png"
+
+        - "glb-back__diff.png"
+
+        - "glb-bottom__diff.png"
+
+        - "glb-front__diff.png"
+
+        - "glb-left__diff.png"
+
+        - "glb-right__diff.png"
+
+        - "glb-top__diff.png"
+
+        - "original-back.png"
+
+        - "original-bottom.png"
+
+        - "original-front.png"
+
+        - "original-left.png"
+
+        - "original-right.png"
+
+        - "original-top.png"
+
+
+        Only available for Base Assets that were optimized after 2024-07'
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             text/plain:
               schema:
                 type: string
                 example: ''
-        404:
+        '404':
           description: error
           content:
             text/plain:
@@ -2703,64 +3271,63 @@ paths:
                 type: string
                 example: ''
       tags:
-        - 'Rapid Model'
+      - Rapid Model
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the Base Asset'
-        example: 281
-        required: true
-        schema:
-          type: integer
-  '/api/v2/rapidmodel/{id}/{format}/downloadQc':
+    - in: path
+      name: id
+      description: The id of the Base Asset
+      example: 281
+      required: true
+      schema:
+        type: integer
+  /api/v2/rapidmodel/{id}/{format}/downloadQc:
     get:
-      summary: 'Downloads the Quality Control report for the optimization output of a given format.'
+      summary: Downloads the Quality Control report for the optimization output of
+        a given format.
       operationId: downloadsTheQualityControlReportForTheOptimizationOutputOfAGivenFormat
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             text/plain:
               schema:
                 type: string
                 example: ''
-        404:
+        '404':
           description: error
           content:
             text/plain:
               schema:
                 type: string
-                example: 'Only available for Rapidmodels that were optimized after 2024-07'
+                example: Only available for Rapidmodels that were optimized after
+                  2024-07
       tags:
-        - 'Rapid Model'
+      - Rapid Model
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the Rapidmodel'
-        example: 281
-        required: true
-        schema:
-          type: integer
-      -
-        in: path
-        name: format
-        description: 'The output format of the Rapidmodel to be'
-        example: usdz
-        required: true
-        schema:
-          type: string
+    - in: path
+      name: id
+      description: The id of the Rapidmodel
+      example: 281
+      required: true
+      schema:
+        type: integer
+    - in: path
+      name: format
+      description: The output format of the Rapidmodel to be
+      example: usdz
+      required: true
+      schema:
+        type: string
   /api/v2/rapidmodel/delete:
     post:
-      summary: 'Delete Multiple Rapid Models'
+      summary: Delete Multiple Rapid Models
       operationId: deleteMultipleRapidModels
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             text/plain:
@@ -2768,7 +3335,7 @@ paths:
                 type: string
                 example: ''
       tags:
-        - 'Rapid Model'
+      - Rapid Model
       requestBody:
         required: true
         content:
@@ -2778,22 +3345,22 @@ paths:
               properties:
                 ids:
                   type: array
-                  description: 'An array of rapid model ids that should be deleted'
+                  description: An array of rapid model ids that should be deleted
                   example:
-                    - 726
-                    - 324
+                  - 726
+                  - 324
                   items:
                     type: integer
               required:
-                - ids
+              - ids
   /api/v2/rawmodel/tags:
     get:
-      summary: 'Get all Base Asset Tags'
+      summary: Get all Base Asset Tags
       operationId: getAllBaseAssetTags
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             application/json:
@@ -2801,38 +3368,32 @@ paths:
                 type: object
                 example:
                   data:
-                    -
-                      name: 'My custom tag'
-                    -
-                      name: Foo
-                    -
-                      name: Bar
+                  - name: My custom tag
+                  - name: Foo
+                  - name: Bar
                 properties:
                   data:
                     type: array
                     example:
-                      -
-                        name: 'My custom tag'
-                      -
-                        name: Foo
-                      -
-                        name: Bar
+                    - name: My custom tag
+                    - name: Foo
+                    - name: Bar
                     items:
                       type: object
                       properties:
                         name:
                           type: string
-                          example: 'My custom tag'
+                          example: My custom tag
       tags:
-        - Tags
+      - Tags
   /api/v2/rapidmodel/tags:
     get:
-      summary: 'Get all Rapid Model Tags'
+      summary: Get all Rapid Model Tags
       operationId: getAllRapidModelTags
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             application/json:
@@ -2840,39 +3401,33 @@ paths:
                 type: object
                 example:
                   data:
-                    -
-                      name: '5 MB'
-                    -
-                      name: 'Medium Resolution'
-                    -
-                      name: 'Low-scene complexity'
+                  - name: 5 MB
+                  - name: Medium Resolution
+                  - name: Low-scene complexity
                 properties:
                   data:
                     type: array
                     example:
-                      -
-                        name: '5 MB'
-                      -
-                        name: 'Medium Resolution'
-                      -
-                        name: 'Low-scene complexity'
+                    - name: 5 MB
+                    - name: Medium Resolution
+                    - name: Low-scene complexity
                     items:
                       type: object
                       properties:
                         name:
                           type: string
-                          example: '5 MB'
+                          example: 5 MB
       tags:
-        - Tags
+      - Tags
   /api/v2/login:
     post:
       summary: Login
       operationId: login
-      description: 'Returns a token that can be used for calling other endpoints'
+      description: Returns a token that can be used for calling other endpoints
       parameters: []
-      responses: {  }
+      responses: {}
       tags:
-        - User
+      - User
       requestBody:
         required: true
         content:
@@ -2882,26 +3437,26 @@ paths:
               properties:
                 email:
                   type: string
-                  description: 'The email of the user'
+                  description: The email of the user
                   example: yourname@example.com
                   nullable: false
                 password:
                   type: string
-                  description: 'The password of the user'
-                  example: 'your password'
+                  description: The password of the user
+                  example: your password
                   nullable: false
               required:
-                - email
-                - password
+              - email
+              - password
       security: []
   /api/v2/user/delete:
     post:
-      summary: 'Delete Account'
+      summary: Delete Account
       operationId: deleteAccount
-      description: 'Delete the user account and all the data associated with it'
+      description: Delete the user account and all the data associated with it
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             text/plain:
@@ -2909,7 +3464,7 @@ paths:
                 type: string
                 example: ''
       tags:
-        - User
+      - User
       requestBody:
         required: true
         content:
@@ -2919,19 +3474,20 @@ paths:
               properties:
                 password:
                   type: string
-                  description: "The password of the user. The account will be deleted if it's correct"
+                  description: The password of the user. The account will be deleted
+                    if it's correct
                   example: '"your password"'
                   nullable: false
               required:
-                - password
+              - password
   /api/v2/user/rapidpoints:
     get:
-      summary: 'Get RapidPoints'
+      summary: Get RapidPoints
       operationId: getRapidPoints
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             application/json:
@@ -2944,15 +3500,15 @@ paths:
                     type: integer
                     example: 20
       tags:
-        - User
+      - User
   /api/v2/user/storage:
     get:
-      summary: 'Get Storage Left'
+      summary: Get Storage Left
       operationId: getStorageLeft
-      description: 'Returns how much storage you have left to use (bytes)'
+      description: Returns how much storage you have left to use (bytes)
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             application/json:
@@ -2965,15 +3521,15 @@ paths:
                     type: integer
                     example: 107374182400
       tags:
-        - User
+      - User
   /api/v2/user/webhooks:
     get:
-      summary: 'Get Webhooks'
+      summary: Get Webhooks
       operationId: getWebhooks
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             application/json:
@@ -2982,27 +3538,26 @@ paths:
                 items:
                   type: object
                 example:
-                  -
-                    id: 6
-                    user_id: 303
-                    url: 'https://mywebhookurl.com'
-                    last_called_at: '2021-10-26T09:45:47.000000Z'
-                    created_at: '2021-10-26T09:45:47.000000Z'
-                    updated_at: '2021-10-26T09:45:47.000000Z'
-                    secret: secret
-                    last_status: null
-                    verify_ssl: true
-                    failed_calls: 0
-                    notified_at: null
+                - id: 6
+                  user_id: 303
+                  url: https://mywebhookurl.com
+                  last_called_at: '2021-10-26T09:45:47.000000Z'
+                  created_at: '2021-10-26T09:45:47.000000Z'
+                  updated_at: '2021-10-26T09:45:47.000000Z'
+                  secret: secret
+                  last_status: null
+                  verify_ssl: true
+                  failed_calls: 0
+                  notified_at: null
       tags:
-        - Webhooks
+      - Webhooks
     post:
-      summary: 'Create Webhook'
+      summary: Create Webhook
       operationId: createWebhook
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             application/json:
@@ -3011,7 +3566,7 @@ paths:
                 example:
                   id: 6
                   user_id: 303
-                  url: 'https://example.com/webhook'
+                  url: https://example.com/webhook
                   last_called_at: '2021-10-26T09:45:47.000000Z'
                   created_at: '2021-10-26T09:45:47.000000Z'
                   updated_at: '2021-10-26T09:45:47.000000Z'
@@ -3029,7 +3584,7 @@ paths:
                     example: 303
                   url:
                     type: string
-                    example: 'https://example.com/webhook'
+                    example: https://example.com/webhook
                   last_called_at:
                     type: string
                     example: '2021-10-26T09:45:47.000000Z'
@@ -3045,6 +3600,7 @@ paths:
                   last_status:
                     type: string
                     example: null
+                    nullable: true
                   verify_ssl:
                     type: boolean
                     example: true
@@ -3054,15 +3610,26 @@ paths:
                   notified_at:
                     type: string
                     example: null
-        500:
-          description: 'Maximum number of tags reached'
+                    nullable: true
+        '500':
+          description: Maximum number of tags reached
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-                example: "[\n \"code\": 1,\n \"message\": \"Maximum number of webhooks allowed already created\"\n]"
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+                  properties:
+                    code:
+                      type: integer
+                    message:
+                      type: string
+              example:
+              - code: 1
+                message: Maximum number of webhooks allowed already created
       tags:
-        - Webhooks
+      - Webhooks
       requestBody:
         required: true
         content:
@@ -3072,30 +3639,30 @@ paths:
               properties:
                 url:
                   type: string
-                  description: 'The url of the webhook'
-                  example: 'https://example.com/webhook'
+                  description: The url of the webhook
+                  example: https://example.com/webhook
                   nullable: false
                 secret:
                   type: string
-                  description: 'A secret to be sent in the header of webhook requests'
-                  example: 'my secret'
+                  description: A secret to be sent in the header of webhook requests
+                  example: my secret
                   nullable: false
                 verify_ssl:
                   type: boolean
-                  description: 'Whether to verify ssl or not'
-                  example: false
+                  description: Whether to verify ssl or not
+                  example: true
                   nullable: false
               required:
-                - url
-                - verify_ssl
-  '/api/v2/user/webhooks/{id}':
+              - url
+              - verify_ssl
+  /api/v2/user/webhooks/{id}:
     delete:
-      summary: 'Delete Webhook'
+      summary: Delete Webhook
       operationId: deleteWebhook
       description: ''
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             text/plain:
@@ -3103,24 +3670,28 @@ paths:
                 type: string
                 example: ''
       tags:
-        - Webhooks
+      - Webhooks
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the webhook'
-        example: 1
-        required: true
-        schema:
-          type: integer
-  '/api/v2/user/webhooks/test/{id}':
+    - in: path
+      name: id
+      description: The id of the webhook
+      example: 1
+      required: true
+      schema:
+        type: integer
+  /api/v2/user/webhooks/test/{id}:
     post:
-      summary: 'Test Webhook'
+      summary: Test Webhook
       operationId: testWebhook
-      description: "A test event will be sent to the webhook to make sure it is accessible and can receive events\n\nCall the \"Test Webhook\" endpoint again to see if the webhook was successfully invoked"
+      description: 'A test event will be sent to the webhook to make sure it is accessible
+        and can receive events
+
+
+        Call the "Test Webhook" endpoint again to see if the webhook was successfully
+        invoked'
       parameters: []
       responses:
-        200:
+        '200':
           description: success
           content:
             text/plain:
@@ -3128,47 +3699,126 @@ paths:
                 type: string
                 example: ''
       tags:
-        - Webhooks
+      - Webhooks
     parameters:
-      -
-        in: path
-        name: id
-        description: 'The id of the webhook'
-        example: 1
-        required: true
-        schema:
-          type: integer
+    - in: path
+      name: id
+      description: The id of the webhook
+      example: 1
+      required: true
+      schema:
+        type: integer
 tags:
-  -
-    name: 'API Tokens'
-    description: 'Endpoints to manage tokens of the user account.'
-  -
-    name: 'Base Asset'
-    description: "Base Assets are sometimes referred to as raw models or source models in tutorials or elsewhere in the docs.\nBase asset is a user uploaded model. All future processing is applied to these assets only.\n\nThis is where you find endpoints some critical endpoints:\n  - Uploading a model\n  - Optimizing a model\n  - Read 3D Metadata of the uploaded model\n  - Get running jobs (we suggest you to check webhooks though)\n  - Find all optimized versions of a base asset\n\n### What happens to uploaded files?\n\nEach base asset upload will trigger some analysis process to generate 3D metadata and render images\nfor using that file in an easier way in downstream processes. You are going to find this data when\nyou call Get Base Asset endpoint and look at .json or image files inside the data -> downloads.\n\n### Automatically exported models\n\nIf the uploaded model is a CAD file, we will also automatically output a .glb and .usd version of it.\nIf the uploaded model is a 3ds Max file, we will automatically output a .glb, .gltf, .fbx, and .usdz\nversion of it while translating all V-ray materials to PBR materials. Read reference documentation of\nDCC Importer for more information on this topic.\n\n### Base Asset Endpoints\n\nHere are all the base asset endpoints:"
-  -
-    name: Embeds
-    description: "Endpoints for managing embeddable 3D viewers created from Rapid Models.\nEmbeds can only be created from optimized Rapid Models, not directly from Base Assets.\n\nHere are all the embed related endpoints:"
-  -
-    name: Presets
-    description: "These are saved 3D Processor Settings for you to organize your assets better. Rapid Models carry on the preset information through which they are created, this way you can understand which Rapid Model was created through which preset.\n\nIn order to create a preset, the preset has to comply to the rules of the 3D processing schema. Please find related reference docs [here](https://docs.rapidpipeline.com/docs/componentDocs/3dProcessingSchemaSettings/processor-schema-overview).\n\nIn most cases, it is probably best if you create your preset using our UI and then refer to its preset ID in relevant API calls when necessary.\n\nHere are all preset related endpoints:"
-  -
-    name: 'Rapid Model'
-    description: "These are sometimes referred to as optimized models. They are created by processing the base assets\nthrough 3D Processor (making a POST call to Optimize endpoint of Base Asset).\n\nHere are all rapid model related endpoints:"
-  -
-    name: Tags
-    description: 'API for listing all of base asset and rapid model tags.'
-  -
-    name: User
-    description: 'APIs for managing user profile.'
-  -
-    name: Webhooks
-    description: "RapidPipeline uses webhooks to notify your application when an event happens in your account.\nWebhooks are particularly useful for upload and optimization events. Instead of polling the API to know the status\nof your upload or optimization, RapidPipeline sends an event to your webhook.\n\nBegin using webhooks with your RapidPipeline integration in just three steps:\n1. Create a webhook endpoint on your server\n2. [Register](https://app.rapidpipeline.com/webhooks) the endpoint with RapidPipeline to go live\n3. Test your endpoint by clicking the test button in the [webhooks page](https://app.rapidpipeline.com/webhooks)\n\n### What are webhooks\nThe webhook endpoint is just more code on your server, which could be written in Ruby, PHP, Node.js, or whatever.\nThe webhook endpoint has an associated URL (e.g., https://example.com/webhooks).\nThe RapidPipeline notifications are Event objects sent as POST requests (Fire-and-forget, no retry).\nThis Event object contains all the relevant information about what just happened, including the type of event and the data associated with that event.\nThe webhook endpoint uses the event details to take any required actions, such as indicating that an optimization should be done.\n\n### Validation\nIn order to validate an incoming webhook event you need to first set up a secret when creating it on RapidPipeline. This secret will be used to sign the body and send the signature as part of the requests header. You can use this secret on your receiving endpoint to validate the content of the body by signing it with the same secret. For an example check out this repository: https://github.com/DGG3D/webhook-api-example\n\n### Optimization Events\nRapidPipeline sends the \"optimization_finished\" event. You can see an example on the right side\n```\n  {\n   \"event_type\": \"optimization_finished\",\n   \"timestamp\": \"2023-01-19T15:03:08.076920Z\",\n   \"data\": {\n     \"status\": \"Successful\",\n     \"message\": \"Optimization has ended and your rapid model is available to download.\",\n     \"rawmodel_id\": 1961,\n     \"rapidmodel_id\": 4213,\n     \"rapidmodel\": {\n       \"rapid.glb\": \"link to rapid model\"\n     }\n   }\n }\n```\n\n### Upload Events\nRapidPipeline sends an \"analysis_finished\" event when your uploaded model has been finished being analyzed and is now ready to be optimized. You can see an two examples for the successful and failed state on the right side.\n\nFor uploaded zip files RapidPipeline sends an \"unzip_finished\" event when your model has been finished being unzipped and is going to be analysed next. You can see an two examples for the successful and failed state on the right side.\n\n```\n  {\n   \"event_type\": \"analysis_finished\",\n   \"timestamp\": \"2023-01-02T15:03:08.076920Z\",\n   \"data\": {\n     \"status\": \"Successful\",\n     \"message\": \"Model analysis has ended and your base asset is ready to be optimized.\",\n     \"rawmodel_id\": 1961,\n   }\n }\n```\n```\n  {\n   \"event_type\": \"analysis_finished\",\n   \"timestamp\": \"2023-01-02T15:03:08.076920Z\",\n   \"data\": {\n     \"status\": \"Failed\",\n     \"message\": \"Analysis failed\",\n     \"rawmodel_id\": 1961,\n   }\n }\n```\n```\n  {\n   \"event_type\": \"unzip_finished\",\n   \"timestamp\": \"2024-01-02T15:03:08.076920Z\",\n   \"data\": {\n     \"status\": \"Successful\",\n     \"message\": \"Model successfully unzipped.\",\n     \"rawmodel_id\": 1961,\n   }\n }\n```\n```\n  {\n   \"event_type\": \"unzip_finished\",\n   \"timestamp\": \"2024-01-02T15:03:08.076920Z\",\n   \"data\": {\n     \"status\": \"Failed\",\n     \"message\": \"Unzip failed\",\n     \"rawmodel_id\": 1961,\n   }\n }\n```"
+- name: API Tokens
+  description: Endpoints to manage tokens of the user account.
+- name: Base Asset
+  description: "Base Assets are sometimes referred to as raw models or source models\
+    \ in tutorials or elsewhere in the docs.\nBase asset is a user uploaded model.\
+    \ All future processing is applied to these assets only.\n\nThis is where you\
+    \ find endpoints some critical endpoints:\n  - Uploading a model\n  - Optimizing\
+    \ a model\n  - Read 3D Metadata of the uploaded model\n  - Get running jobs (we\
+    \ suggest you to check webhooks though)\n  - Find all optimized versions of a\
+    \ base asset\n\n### What happens to uploaded files?\n\nEach base asset upload\
+    \ will trigger some analysis process to generate 3D metadata and render images\n\
+    for using that file in an easier way in downstream processes. You are going to\
+    \ find this data when\nyou call Get Base Asset endpoint and look at .json or image\
+    \ files inside the data -> downloads.\n\n### Automatically exported models\n\n\
+    If the uploaded model is a CAD file, we will also automatically output a .glb\
+    \ and .usd version of it.\nIf the uploaded model is a 3ds Max file, we will automatically\
+    \ output a .glb, .gltf, .fbx, and .usdz\nversion of it while translating all V-ray\
+    \ materials to PBR materials. Read reference documentation of\nDCC Importer for\
+    \ more information on this topic.\n\n### Base Asset Endpoints\n\nHere are all\
+    \ the base asset endpoints:"
+- name: Embeds
+  description: 'Endpoints for managing embeddable 3D viewers created from Rapid Models.
+
+    Embeds can only be created from optimized Rapid Models, not directly from Base
+    Assets.
+
+
+    Here are all the embed related endpoints:'
+- name: Presets
+  description: 'These are saved 3D Processor Settings for you to organize your assets
+    better. Rapid Models carry on the preset information through which they are created,
+    this way you can understand which Rapid Model was created through which preset.
+
+
+    In order to create a preset, the preset has to comply to the rules of the 3D processing
+    schema. Please find related reference docs [here](https://docs.rapidpipeline.com/docs/componentDocs/3dProcessingSchemaSettings/processor-schema-overview).
+
+
+    In most cases, it is probably best if you create your preset using our UI and
+    then refer to its preset ID in relevant API calls when necessary.
+
+
+    Here are all preset related endpoints:'
+- name: Rapid Model
+  description: 'These are sometimes referred to as optimized models. They are created
+    by processing the base assets
+
+    through 3D Processor (making a POST call to Optimize endpoint of Base Asset).
+
+
+    Here are all rapid model related endpoints:'
+- name: Tags
+  description: API for listing all of base asset and rapid model tags.
+- name: User
+  description: APIs for managing user profile.
+- name: Webhooks
+  description: "RapidPipeline uses webhooks to notify your application when an event\
+    \ happens in your account.\nWebhooks are particularly useful for upload and optimization\
+    \ events. Instead of polling the API to know the status\nof your upload or optimization,\
+    \ RapidPipeline sends an event to your webhook.\n\nBegin using webhooks with your\
+    \ RapidPipeline integration in just three steps:\n1. Create a webhook endpoint\
+    \ on your server\n2. [Register](https://app.rapidpipeline.com/webhooks) the endpoint\
+    \ with RapidPipeline to go live\n3. Test your endpoint by clicking the test button\
+    \ in the [webhooks page](https://app.rapidpipeline.com/webhooks)\n\n### What are\
+    \ webhooks\nThe webhook endpoint is just more code on your server, which could\
+    \ be written in Ruby, PHP, Node.js, or whatever.\nThe webhook endpoint has an\
+    \ associated URL (e.g., https://example.com/webhooks).\nThe RapidPipeline notifications\
+    \ are Event objects sent as POST requests (Fire-and-forget, no retry).\nThis Event\
+    \ object contains all the relevant information about what just happened, including\
+    \ the type of event and the data associated with that event.\nThe webhook endpoint\
+    \ uses the event details to take any required actions, such as indicating that\
+    \ an optimization should be done.\n\n### Validation\nIn order to validate an incoming\
+    \ webhook event you need to first set up a secret when creating it on RapidPipeline.\
+    \ This secret will be used to sign the body and send the signature as part of\
+    \ the requests header. You can use this secret on your receiving endpoint to validate\
+    \ the content of the body by signing it with the same secret. For an example check\
+    \ out this repository: https://github.com/DGG3D/webhook-api-example\n\n### Optimization\
+    \ Events\nRapidPipeline sends the \"optimization_finished\" event. You can see\
+    \ an example on the right side\n```\n  {\n   \"event_type\": \"optimization_finished\"\
+    ,\n   \"timestamp\": \"2023-01-19T15:03:08.076920Z\",\n   \"data\": {\n     \"\
+    status\": \"Successful\",\n     \"message\": \"Optimization has ended and your\
+    \ rapid model is available to download.\",\n     \"rawmodel_id\": 1961,\n    \
+    \ \"rapidmodel_id\": 4213,\n     \"rapidmodel\": {\n       \"rapid.glb\": \"link\
+    \ to rapid model\"\n     }\n   }\n }\n```\n\n### Upload Events\nRapidPipeline\
+    \ sends an \"analysis_finished\" event when your uploaded model has been finished\
+    \ being analyzed and is now ready to be optimized. You can see an two examples\
+    \ for the successful and failed state on the right side.\n\nFor uploaded zip files\
+    \ RapidPipeline sends an \"unzip_finished\" event when your model has been finished\
+    \ being unzipped and is going to be analysed next. You can see an two examples\
+    \ for the successful and failed state on the right side.\n\n```\n  {\n   \"event_type\"\
+    : \"analysis_finished\",\n   \"timestamp\": \"2023-01-02T15:03:08.076920Z\",\n\
+    \   \"data\": {\n     \"status\": \"Successful\",\n     \"message\": \"Model analysis\
+    \ has ended and your base asset is ready to be optimized.\",\n     \"rawmodel_id\"\
+    : 1961,\n   }\n }\n```\n```\n  {\n   \"event_type\": \"analysis_finished\",\n\
+    \   \"timestamp\": \"2023-01-02T15:03:08.076920Z\",\n   \"data\": {\n     \"status\"\
+    : \"Failed\",\n     \"message\": \"Analysis failed\",\n     \"rawmodel_id\": 1961,\n\
+    \   }\n }\n```\n```\n  {\n   \"event_type\": \"unzip_finished\",\n   \"timestamp\"\
+    : \"2024-01-02T15:03:08.076920Z\",\n   \"data\": {\n     \"status\": \"Successful\"\
+    ,\n     \"message\": \"Model successfully unzipped.\",\n     \"rawmodel_id\":\
+    \ 1961,\n   }\n }\n```\n```\n  {\n   \"event_type\": \"unzip_finished\",\n   \"\
+    timestamp\": \"2024-01-02T15:03:08.076920Z\",\n   \"data\": {\n     \"status\"\
+    : \"Failed\",\n     \"message\": \"Unzip failed\",\n     \"rawmodel_id\": 1961,\n\
+    \   }\n }\n```"
 components:
   securitySchemes:
     default:
       type: http
       scheme: bearer
-      description: 'You can create your API token <a href="https://app.rapidpipeline.com/api_tokens">here</a>. <br /> Our REST API, excluding upload related endpoints, is subject to rate limits (2000 requests per minute per User or IP)'
+      description: You can create your API token <a href="https://app.rapidpipeline.com/api_tokens">here</a>.
+        <br /> Our REST API, excluding upload related endpoints, is subject to rate
+        limits (2000 requests per minute per User or IP)
 security:
-  -
-    default: []
+- default: []

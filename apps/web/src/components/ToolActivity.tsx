@@ -2,9 +2,9 @@ import { ToolEvent } from "@/lib/types"
 
 export default function ToolActivity({ events }: { events: ToolEvent[] }) {
   return (
-    <div className="panel p-4 h-full min-h-0 flex flex-col">
+    <div className="panel p-4 h-full min-h-0 flex flex-col min-w-0">
       <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Tool Activity</div>
-      <div className="mt-4 space-y-3 overflow-auto flex-1 min-h-0">
+      <div className="mt-4 space-y-3 overflow-y-auto overflow-x-auto flex-1 min-h-0 min-w-0">
         {events.map((e) => (
           <div key={e.callId} className="rounded-xl border border-slate-200 bg-white px-3 py-2">
             <div className="flex items-center justify-between">

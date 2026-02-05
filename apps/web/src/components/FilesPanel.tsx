@@ -11,15 +11,15 @@ export default function FilesPanel({
   files: FileItem[]
   selectedFiles: Record<string, boolean>
   onToggle: (id: string) => void
-  onUpload: (file: File) => void
+  onUpload: (files: File[]) => void
   onDelete: (id: string) => void
 }) {
   const [sortKey, setSortKey] = useState<"name" | "size" | "created">("name")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
 
   const handleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) onUpload(file)
+    const files = Array.from(event.target.files || [])
+    if (files.length) onUpload(files)
     event.target.value = ""
   }
 
@@ -73,7 +73,7 @@ export default function FilesPanel({
         </div>
         <label className="btn">
           Upload Files
-          <input type="file" className="hidden" onChange={handleUpload} />
+          <input type="file" className="hidden" onChange={handleUpload} multiple />
         </label>
       </div>
 

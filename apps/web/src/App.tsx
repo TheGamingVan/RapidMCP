@@ -186,7 +186,7 @@ export default function App() {
     const msg: ChatMessage = { id: crypto.randomUUID(), role: "user", content: text }
     setMessages((prev) => [...prev, msg])
     setIsProcessing(true)
-    wsRef.current?.send({ type: "user_message", sessionId, content: text, fileUris })
+    wsRef.current?.send({ type: "user_message", sessionId, content: text, fileUris, config: apiConfig })
   }
 
   const handleReconnect = () => {
@@ -227,8 +227,10 @@ export default function App() {
     }
   }, [hostUrl, apiConfig.geminiApiKey])
 
-  const handleUpload = async (file: File) => {
-    await uploadFile(hostUrl, file)
+  const handleUpload = async (filesToUpload: File[]) => {
+    for (const file of filesToUpload) {
+      await uploadFile(hostUrl, file)
+    }
     const nextFiles = await getFiles(hostUrl)
     if (nextFiles) setFiles(nextFiles)
   }
@@ -264,7 +266,7 @@ export default function App() {
                 onChange={handleConfigChange}
                 models={[...new Set([...COMMON_GEMINI_MODELS, ...geminiModels, ...(apiConfig.geminiModel ? [apiConfig.geminiModel] : [])])]}
               />
-              <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 min-h-0">
+              <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 min-h-0 min-w-0">
                 <ChatPanel messages={messages} draftAssistant={draftAssistant} onSend={handleSend} isProcessing={isProcessing} />
                 <ToolActivity events={toolEvents} />
               </div>

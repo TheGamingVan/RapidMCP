@@ -28,18 +28,29 @@ class GeminiClient:
         except Exception:
             return {"geminiApiKey": "", "geminiModel": ""}
 
-    def is_configured(self) -> bool:
+    def is_configured(self, override: Dict[str, str] | None = None) -> bool:
+        if override and override.get("geminiApiKey"):
+            return True
         cfg = self._load_runtime_config()
         return bool(cfg.get("geminiApiKey") or self.api_key)
 
-    def current_model(self) -> str:
+    def current_model(self, override: Dict[str, str] | None = None) -> str:
+        if override and override.get("geminiModel"):
+            return override.get("geminiModel") or self.model_name
         cfg = self._load_runtime_config()
         return cfg.get("geminiModel") or self.model_name
 
-    async def decide(self, conversation: List[Dict[str, Any]], tools: List[Dict[str, Any]], user_message: str, file_uris: List[str]) -> Dict[str, Any]:
+    async def decide(
+        self,
+        conversation: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        user_message: str,
+        file_uris: List[str],
+        config_override: Dict[str, str] | None = None,
+    ) -> Dict[str, Any]:
         cfg = self._load_runtime_config()
-        api_key = cfg.get("geminiApiKey") or self.api_key
-        model_name = cfg.get("geminiModel") or self.model_name
+        api_key = (config_override or {}).get("geminiApiKey") or cfg.get("geminiApiKey") or self.api_key
+        model_name = (config_override or {}).get("geminiModel") or cfg.get("geminiModel") or self.model_name
         if not api_key:
             return {"type": "final", "message": "Gemini API key is not configured"}
         system_prompt = self.build_system_prompt(tools, file_uris)
@@ -162,7 +173,7 @@ class GeminiClient:
                         return {"type": "tool", "name": data.get("name"), "arguments": data.get("arguments") or {}}
                     if "message" in data and isinstance(data.get("message"), str):
                         return {"type": "final", "message": data.get("message")}
-                return data
+                return {"type": "final", "message": json.dumps(data)}
             except Exception:
                 pass
         match = re.search(r"\{.*\}", text, re.DOTALL)
@@ -178,7 +189,7 @@ class GeminiClient:
                         return {"type": "tool", "name": data.get("name"), "arguments": data.get("arguments") or {}}
                     if "message" in data and isinstance(data.get("message"), str):
                         return {"type": "final", "message": data.get("message")}
-                return data
+                return {"type": "final", "message": json.dumps(data)}
             except Exception:
                 pass
         return {"type": "final", "message": text}

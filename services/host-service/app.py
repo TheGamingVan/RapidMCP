@@ -90,7 +90,11 @@ def write_api_config(config: Dict[str, str]) -> Dict[str, str]:
     }
     tmp_path = API_CONFIG_PATH.with_suffix(API_CONFIG_PATH.suffix + ".tmp")
     tmp_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    tmp_path.replace(API_CONFIG_PATH)
+    try:
+        tmp_path.replace(API_CONFIG_PATH)
+    except PermissionError:
+        # If the file is locked briefly, fall back to overwrite.
+        API_CONFIG_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return payload
 
 def compute_allowed_dirs() -> List[str]:
@@ -308,13 +312,20 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 session_id = data.get("sessionId")
                 content = data.get("content", "")
                 file_uris = data.get("fileUris", [])
-                await handle_user_message(ws, session_id, content, file_uris)
+                config_override = data.get("config")
+                await handle_user_message(ws, session_id, content, file_uris, config_override)
     except WebSocketDisconnect:
         return
     except Exception:
         logger.exception("WebSocket error session=%s", session_id)
 
-async def handle_user_message(ws: WebSocket, session_id: Optional[str], content: str, file_uris: List[str]) -> None:
+async def handle_user_message(
+    ws: WebSocket,
+    session_id: Optional[str],
+    content: str,
+    file_uris: List[str],
+    config_override: Optional[Dict[str, Any]] = None,
+) -> None:
     tools = await get_tools()
     status_payload = await resolve_status()
     await ws.send_text(json.dumps({"type": "status", **status_payload}))
@@ -323,6 +334,20 @@ async def handle_user_message(ws: WebSocket, session_id: Optional[str], content:
     api_tools = [t for t in tools if t.get("source") == "api"]
     memory = session_conversations.get(session_id, []) if session_id else []
     state = session_state.get(session_id, {}) if session_id else {}
+    normalized_override: Dict[str, str] | None = None
+    if isinstance(config_override, dict):
+        normalized_override = {
+            "geminiApiKey": str(config_override.get("geminiApiKey") or ""),
+            "geminiModel": str(config_override.get("geminiModel") or ""),
+        }
+        state["apiConfig"] = normalized_override
+        if session_id is not None:
+            session_state[session_id] = state
+    elif isinstance(state.get("apiConfig"), dict):
+        normalized_override = {
+            "geminiApiKey": str(state.get("apiConfig", {}).get("geminiApiKey") or ""),
+            "geminiModel": str(state.get("apiConfig", {}).get("geminiModel") or ""),
+        }
 
     async def run_tool_ws(name: str, arguments: Dict[str, Any]) -> Any:
         call_id = str(uuid.uuid4())
@@ -488,7 +513,7 @@ async def handle_user_message(ws: WebSocket, session_id: Optional[str], content:
     last_tool_name: Optional[str] = None
     max_iters = 12
     for i in range(max_iters):
-        decision = await gemini_client.decide(conversation, tools, "", file_uris)
+        decision = await gemini_client.decide(conversation, tools, "", file_uris, config_override=normalized_override)
         decision_type = decision.get("type")
         if decision_type not in ("tool", "final"):
             logger.warning("Model returned invalid decision type: %s", decision)
@@ -518,6 +543,13 @@ async def handle_user_message(ws: WebSocket, session_id: Optional[str], content:
                 last_tool_result = result
                 last_tool_name = name
                 conversation.append({"role": "tool", "name": name, "content": json.dumps(result)})
+                if not gemini_client.is_configured(normalized_override):
+                    summary = summarize_result(result)
+                    message = f"Done. {summary}"
+                    await emit_assistant_message(ws, message)
+                    if session_id is not None:
+                        session_conversations[session_id] = conversation + [{"role": "assistant", "content": message}]
+                    return
                 content = ""
                 continue
             except Exception as e:
