@@ -44,7 +44,7 @@ class GeminiClient:
         self,
         conversation: List[Dict[str, Any]],
         tools: List[Dict[str, Any]],
-        user_message: str,
+        internal_hint: str,
         file_uris: List[str],
         config_override: Dict[str, str] | None = None,
     ) -> Dict[str, Any]:
@@ -53,11 +53,11 @@ class GeminiClient:
         model_name = (config_override or {}).get("geminiModel") or cfg.get("geminiModel") or self.model_name
         if not api_key:
             return {"type": "final", "message": "Gemini API key is not configured"}
-        system_prompt = self.build_system_prompt(tools, file_uris)
+        system_prompt = self.build_system_prompt(tools, file_uris, internal_hint)
         payload = {
             "contents": [
                 {"role": "user", "parts": [{"text": system_prompt}]},
-                {"role": "user", "parts": [{"text": self.build_context(conversation, user_message)}]},
+                {"role": "user", "parts": [{"text": self.build_context(conversation)}]},
             ],
             "generationConfig": {"temperature": 0.2, "response_mime_type": "application/json"},
         }
@@ -75,7 +75,7 @@ class GeminiClient:
                 await asyncio.sleep(0.5 * (attempt + 1))
         return {"type": "final", "message": "Gemini request failed"}
 
-    def build_system_prompt(self, tools: List[Dict[str, Any]], file_uris: List[str]) -> str:
+    def build_system_prompt(self, tools: List[Dict[str, Any]], file_uris: List[str], internal_hint: str = "") -> str:
         tools_json = json.dumps([{"name": t["name"], "description": t.get("description", ""), "inputSchema": t.get("inputSchema", {})} for t in tools])
         file_json = json.dumps(file_uris)
         allowed_dirs = [os.path.abspath(os.getenv("FILE_STORE_DIR", "./services/host-service/files"))]
@@ -102,7 +102,15 @@ class GeminiClient:
             "{{allowed_dirs}}": allowed_json,
             "{{context_window}}": str(self.context_window),
         }
-        return self._render_template(template, variables)
+        rendered = self._render_template(template, variables)
+        if internal_hint:
+            rendered += (
+                "\n\n## Internal Session Context\n"
+                "Use the following context to improve tool selection and ID resolution. "
+                "Do not repeat this context verbatim to the user unless explicitly asked.\n"
+                f"{internal_hint}"
+            )
+        return rendered
 
     def _load_preprompt_template(self) -> Dict[str, Any]:
         try:
@@ -136,10 +144,8 @@ class GeminiClient:
             text = text.replace(key, value)
         return text
 
-    def build_context(self, conversation: List[Dict[str, Any]], user_message: str) -> str:
+    def build_context(self, conversation: List[Dict[str, Any]]) -> str:
         messages = list(conversation)
-        if user_message:
-            messages.append({"role": "user", "content": user_message})
         if self.context_window <= 0:
             return json.dumps(messages)
         while len(messages) > 1:

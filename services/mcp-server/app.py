@@ -8,6 +8,8 @@ from typing import Any, Dict, Optional
 from fastapi import FastAPI
 import httpx
 from fastmcp import FastMCP
+from fastmcp.server.openapi.components import OpenAPITool
+from fastmcp.utilities.openapi.models import HTTPRoute
 
 logger = logging.getLogger("mcp-server.openapi")
 if not logging.getLogger().handlers:
@@ -108,13 +110,29 @@ openapi_loaded = False
 openapi_error: Optional[str] = None
 openapi_exception: Optional[str] = None
 
+
+def customize_openapi_component(route: HTTPRoute, component: Any) -> None:
+    # Some optimize endpoints may return empty/non-object bodies on success or edge cases.
+    # Disable strict output schema for these tools so FastMCP surfaces real API/tool errors
+    # instead of secondary "Output validation error" messages.
+    if isinstance(component, OpenAPITool):
+        op_id = (route.operation_id or "").lower()
+        path = (route.path or "").lower()
+        if op_id in {"optimize", "multioptimize"} or "/rawmodel/optimize" in path:
+            component.output_schema = None
+
 openapi_spec = read_openapi()
 try:
     if not openapi_spec:
         raise ValueError("OpenAPI spec missing or invalid.")
     default_api_base = resolve_api_base(openapi_spec)
     client = DynamicConfigClient(load_runtime_config, default_api_base)
-    mcp = FastMCP.from_openapi(openapi_spec, client=client, name="mcp-server")
+    mcp = FastMCP.from_openapi(
+        openapi_spec,
+        client=client,
+        name="mcp-server",
+        mcp_component_fn=customize_openapi_component,
+    )
     openapi_loaded = True
 except Exception as exc:
     openapi_error = "Failed to initialize FastMCP from OpenAPI."

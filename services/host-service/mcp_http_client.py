@@ -32,6 +32,8 @@ class McpHttpClient:
                     resp = await client.post(self.base_url, json=payload, headers=self._headers)
                     resp.raise_for_status()
                     data = resp.json()
+                    if isinstance(data, dict) and "error" in data:
+                        return []
                     return data.get("result", {}).get("tools", [])
             except Exception:
                 await asyncio.sleep(0.3)
@@ -43,4 +45,29 @@ class McpHttpClient:
             resp = await client.post(self.base_url, json=payload, headers=self._headers)
             resp.raise_for_status()
             data = resp.json()
-            return data.get("result")
+            if isinstance(data, dict) and "error" in data:
+                err = data.get("error") or {}
+                if isinstance(err, dict):
+                    return {
+                        "error": str(err.get("message") or "MCP tool call failed"),
+                        "code": err.get("code"),
+                        "details": err.get("data"),
+                        "tool": name,
+                    }
+                return {"error": str(err), "tool": name}
+            result = data.get("result")
+            if isinstance(result, dict) and result.get("isError") is True:
+                content = result.get("content")
+                message = ""
+                if isinstance(content, list):
+                    text_parts: List[str] = []
+                    for item in content:
+                        if isinstance(item, dict) and item.get("type") == "text":
+                            txt = item.get("text")
+                            if isinstance(txt, str) and txt.strip():
+                                text_parts.append(txt.strip())
+                    message = " ".join(text_parts).strip()
+                if not message:
+                    message = "MCP tool reported an error"
+                return {"error": message, "tool": name}
+            return result

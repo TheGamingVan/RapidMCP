@@ -63,6 +63,280 @@ last_fs_tool_names: set[str] = set()
 session_conversations: Dict[str, List[Dict[str, Any]]] = {}
 session_state: Dict[str, Dict[str, Any]] = {}
 
+
+def _safe_int(value: Any) -> Optional[int]:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.isdigit():
+        try:
+            return int(value)
+        except Exception:
+            return None
+    return None
+
+
+def _collect_keyed_ints(obj: Any, key: str) -> List[int]:
+    out: List[int] = []
+
+    def visit(node: Any) -> None:
+        if isinstance(node, dict):
+            if key in node:
+                iv = _safe_int(node.get(key))
+                if iv is not None:
+                    out.append(iv)
+            for v in node.values():
+                visit(v)
+        elif isinstance(node, list):
+            for item in node:
+                visit(item)
+
+    visit(obj)
+    return out
+
+
+def _extract_named_ids(obj: Any) -> List[Dict[str, Any]]:
+    found: List[Dict[str, Any]] = []
+
+    def visit(node: Any) -> None:
+        if isinstance(node, dict):
+            nid = _safe_int(node.get("id"))
+            name = node.get("name")
+            if nid is not None and isinstance(name, str) and name.strip():
+                found.append({"id": nid, "name": name.strip()})
+            for v in node.values():
+                visit(v)
+        elif isinstance(node, list):
+            for item in node:
+                visit(item)
+
+    visit(obj)
+    return found
+
+
+def _update_asset_context(state: Dict[str, Any], tool_name: str, result: Any) -> Dict[str, Any]:
+    if isinstance(result, dict) and "error" in result:
+        return state
+
+    ctx = state.get("assetContext")
+    if not isinstance(ctx, dict):
+        ctx = {}
+
+    known_base_ids = [int(x) for x in ctx.get("knownBaseAssetIds", []) if isinstance(x, int)]
+    known_rapid_ids = [int(x) for x in ctx.get("knownRapidModelIds", []) if isinstance(x, int)]
+    known_preset_ids = [int(x) for x in ctx.get("knownPresetIds", []) if isinstance(x, int)]
+    name_to_base = ctx.get("baseAssetNameToId", {})
+    name_to_preset = ctx.get("presetNameToId", {})
+    if not isinstance(name_to_base, dict):
+        name_to_base = {}
+    if not isinstance(name_to_preset, dict):
+        name_to_preset = {}
+
+    def push_unique(target: List[int], value: int, limit: int = 25) -> None:
+        if value in target:
+            target.remove(value)
+        target.append(value)
+        if len(target) > limit:
+            del target[:-limit]
+
+    rawmodel_ids = _collect_keyed_ints(result, "rawmodel_id")
+    rapidmodel_ids = _collect_keyed_ints(result, "rapidmodel_id")
+
+    tool_lc = (tool_name or "").lower()
+
+    is_preset_tool = "preset" in tool_lc
+    is_rapid_tool = "rapidmodel" in tool_lc
+    is_base_tool = any(token in tool_lc for token in ("rawmodel", "base", "upload", "analysis"))
+    is_optimize_tool = "optimize" in tool_lc
+
+    for rid in rawmodel_ids:
+        push_unique(known_base_ids, rid)
+        ctx["lastBaseAssetId"] = rid
+
+    for rid in rapidmodel_ids:
+        push_unique(known_rapid_ids, rid)
+        ctx["lastRapidModelId"] = rid
+
+    direct_id = _safe_int(result.get("id")) if isinstance(result, dict) else None
+    if direct_id is not None:
+        if is_preset_tool:
+            push_unique(known_preset_ids, direct_id)
+            ctx["lastPresetId"] = direct_id
+        elif is_rapid_tool or is_optimize_tool:
+            push_unique(known_rapid_ids, direct_id)
+            ctx["lastRapidModelId"] = direct_id
+        elif is_base_tool:
+            push_unique(known_base_ids, direct_id)
+            ctx["lastBaseAssetId"] = direct_id
+
+    for item in _extract_named_ids(result):
+        item_id = int(item["id"])
+        item_name = str(item["name"])
+        normalized = item_name.lower()
+        if is_preset_tool:
+            push_unique(known_preset_ids, item_id)
+            name_to_preset[normalized] = item_id
+            ctx["lastPresetId"] = item_id
+        elif is_rapid_tool:
+            push_unique(known_rapid_ids, item_id)
+        elif is_base_tool or is_optimize_tool:
+            push_unique(known_base_ids, item_id)
+            name_to_base[normalized] = item_id
+            stem = Path(item_name).stem.lower()
+            if stem:
+                name_to_base[stem] = item_id
+            ctx["lastBaseAssetId"] = item_id
+
+    ctx["knownBaseAssetIds"] = known_base_ids
+    ctx["knownRapidModelIds"] = known_rapid_ids
+    ctx["knownPresetIds"] = known_preset_ids
+    ctx["baseAssetNameToId"] = name_to_base
+    ctx["presetNameToId"] = name_to_preset
+    state["assetContext"] = ctx
+    return state
+
+
+def _strip_none_values(value: Any) -> Any:
+    if isinstance(value, dict):
+        out: Dict[str, Any] = {}
+        for k, v in value.items():
+            cleaned = _strip_none_values(v)
+            if cleaned is not None:
+                out[k] = cleaned
+        return out
+    if isinstance(value, list):
+        out_list: List[Any] = []
+        for item in value:
+            cleaned = _strip_none_values(item)
+            if cleaned is not None:
+                out_list.append(cleaned)
+        return out_list
+    return value
+
+
+def _extract_preset_id(arguments: Dict[str, Any]) -> Optional[int]:
+    candidates: List[Any] = []
+    if "preset_id" in arguments:
+        candidates.append(arguments.get("preset_id"))
+    body = arguments.get("body")
+    if isinstance(body, dict) and "preset_id" in body:
+        candidates.append(body.get("preset_id"))
+    config = arguments.get("config")
+    if isinstance(config, dict) and "preset_id" in config:
+        candidates.append(config.get("preset_id"))
+    for c in candidates:
+        iv = _safe_int(c)
+        if iv is not None and iv > 0:
+            return iv
+    return None
+
+
+def _inject_preset_id(arguments: Dict[str, Any], preset_id: int) -> Dict[str, Any]:
+    updated = dict(arguments)
+    updated["preset_id"] = preset_id
+    return updated
+
+
+def _extract_config_obj(arguments: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    config = arguments.get("config")
+    if isinstance(config, dict):
+        return config
+    body = arguments.get("body")
+    if isinstance(body, dict):
+        body_config = body.get("config")
+        if isinstance(body_config, dict):
+            return body_config
+    return None
+
+
+def _normalize_optimize_arguments(arguments: Dict[str, Any]) -> Dict[str, Any]:
+    # Ensure optimize payload always conforms to the OpenAPI tool shape.
+    normalized = dict(arguments)
+
+    # `id` must remain untouched if present; model may provide it as string.
+    model_id = _safe_int(normalized.get("id"))
+    if model_id is not None:
+        normalized["id"] = model_id
+
+    # Keep only valid tags.
+    tags = normalized.get("tags")
+    if tags is not None:
+        if isinstance(tags, list):
+            normalized["tags"] = [str(t) for t in tags if isinstance(t, str) and t.strip()]
+            if not normalized["tags"]:
+                normalized.pop("tags", None)
+        else:
+            normalized.pop("tags", None)
+
+    # Normalize `preset_id` and `config` to be mutually exclusive and valid.
+    preset_id = _extract_preset_id(normalized)
+    config = normalized.get("config")
+    config_obj = config if isinstance(config, dict) and len(config) > 0 else None
+
+    if preset_id is not None and preset_id > 0:
+        normalized["preset_id"] = int(preset_id)
+        normalized.pop("config", None)
+    elif config_obj is not None:
+        normalized["config"] = config_obj
+        normalized.pop("preset_id", None)
+    else:
+        normalized.pop("preset_id", None)
+        normalized.pop("config", None)
+
+    # Drop any body wrapper if model produced one; optimize expects top-level fields.
+    normalized.pop("body", None)
+    return normalized
+
+
+def _pick_known_preset_for_goal(asset_ctx: Dict[str, Any], user_text: str) -> Optional[int]:
+    if not isinstance(asset_ctx, dict):
+        return None
+    name_to_preset = asset_ctx.get("presetNameToId", {})
+    if not isinstance(name_to_preset, dict) or not name_to_preset:
+        return None
+    text = (user_text or "").lower()
+    is_web = any(token in text for token in ("web", "website", "browser", "viewer"))
+    is_mobile = any(token in text for token in ("mobile", "android", "ios", "fast", "small"))
+    is_quality = any(token in text for token in ("high quality", "best quality", "hero", "cinematic"))
+
+    scored: List[tuple[int, int]] = []
+    for preset_name, pid_val in name_to_preset.items():
+        pid = _safe_int(pid_val)
+        if pid is None or pid <= 0:
+            continue
+        n = str(preset_name).lower()
+        score = 0
+        if is_web:
+            if "webp" in n:
+                score += 5
+            if "web" in n:
+                score += 4
+            if "mid" in n:
+                score += 3
+            if "high" in n:
+                score += 2
+            if "low" in n:
+                score += 1
+        if is_mobile:
+            if "low" in n:
+                score += 3
+            if "compression" in n:
+                score += 3
+            if "mid" in n:
+                score += 1
+        if is_quality:
+            if "high" in n:
+                score += 4
+            if "quality" in n:
+                score += 3
+        if score > 0:
+            scored.append((score, pid))
+    if not scored:
+        return None
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return scored[0][1]
+
 def read_api_config() -> Dict[str, str]:
     if not API_CONFIG_PATH.exists():
         return {"apiBaseUrl": "", "bearerToken": "", "geminiApiKey": "", "geminiModel": ""}
@@ -513,11 +787,55 @@ async def handle_user_message(
     last_tool_name: Optional[str] = None
     max_iters = 12
     for i in range(max_iters):
-        decision = await gemini_client.decide(conversation, tools, "", file_uris, config_override=normalized_override)
+        asset_ctx = state.get("assetContext", {}) if isinstance(state, dict) else {}
+        if not isinstance(asset_ctx, dict):
+            asset_ctx = {}
+        hint_payload: Dict[str, Any] = {}
+        if isinstance(asset_ctx.get("lastBaseAssetId"), int):
+            hint_payload["lastBaseAssetId"] = asset_ctx.get("lastBaseAssetId")
+        if isinstance(asset_ctx.get("lastRapidModelId"), int):
+            hint_payload["lastRapidModelId"] = asset_ctx.get("lastRapidModelId")
+        if isinstance(asset_ctx.get("lastPresetId"), int):
+            hint_payload["lastPresetId"] = asset_ctx.get("lastPresetId")
+        base_ids = asset_ctx.get("knownBaseAssetIds", [])
+        rapid_ids = asset_ctx.get("knownRapidModelIds", [])
+        preset_ids = asset_ctx.get("knownPresetIds", [])
+        if isinstance(base_ids, list) and base_ids:
+            hint_payload["knownBaseAssetIds"] = base_ids[-10:]
+        if isinstance(rapid_ids, list) and rapid_ids:
+            hint_payload["knownRapidModelIds"] = rapid_ids[-10:]
+        if isinstance(preset_ids, list) and preset_ids:
+            hint_payload["knownPresetIds"] = preset_ids[-10:]
+        named_map = asset_ctx.get("baseAssetNameToId", {})
+        if isinstance(named_map, dict) and named_map:
+            trimmed_map = dict(list(named_map.items())[-20:])
+            hint_payload["baseAssetNameToId"] = trimmed_map
+        preset_map = asset_ctx.get("presetNameToId", {})
+        if isinstance(preset_map, dict) and preset_map:
+            trimmed_preset_map = dict(list(preset_map.items())[-20:])
+            hint_payload["presetNameToId"] = trimmed_preset_map
+        hint_text = ""
+        if hint_payload:
+            hint_text = (
+                "Session asset context (source of truth; never guess IDs): "
+                + json.dumps(hint_payload)
+            )
+
+        decision = await gemini_client.decide(
+            conversation,
+            tools,
+            hint_text,
+            file_uris,
+            config_override=normalized_override,
+        )
         decision_type = decision.get("type")
         if decision_type not in ("tool", "final"):
             logger.warning("Model returned invalid decision type: %s", decision)
-            message = "Model returned an invalid response. Please try again."
+            decision_keys = sorted(decision.keys()) if isinstance(decision, dict) else []
+            message = (
+                "I couldn't continue because the model returned an invalid decision format "
+                f"(type={repr(decision_type)}, keys={decision_keys}). Please try again."
+            )
             await emit_assistant_message(ws, message)
             if session_id is not None:
                 session_conversations[session_id] = conversation + [{"role": "assistant", "content": message}]
@@ -531,7 +849,50 @@ async def handle_user_message(
                 if session_id is not None:
                     session_conversations[session_id] = conversation + [{"role": "assistant", "content": message}]
                 return
-            arguments = decision.get("arguments", {})
+            raw_arguments = decision.get("arguments", {})
+            arguments = _strip_none_values(raw_arguments) if isinstance(raw_arguments, dict) else {}
+            if name == "api.optimize":
+                arguments = _normalize_optimize_arguments(arguments)
+                preset_id = _extract_preset_id(arguments)
+                config_obj = _extract_config_obj(arguments)
+                if preset_id is None:
+                    last_preset = asset_ctx.get("lastPresetId") if isinstance(asset_ctx, dict) else None
+                    if isinstance(last_preset, int) and last_preset > 0:
+                        arguments = _inject_preset_id(arguments, last_preset)
+                        preset_id = last_preset
+                if preset_id is None and isinstance(asset_ctx, dict):
+                    inferred_preset = _pick_known_preset_for_goal(asset_ctx, content_text)
+                    if isinstance(inferred_preset, int) and inferred_preset > 0:
+                        arguments = _inject_preset_id(arguments, inferred_preset)
+                        preset_id = inferred_preset
+                # Re-normalize after any preset injection.
+                arguments = _normalize_optimize_arguments(arguments)
+                config_obj = _extract_config_obj(arguments)
+                # Guard: never call optimize without either a valid preset_id or a config object.
+                if preset_id is None and not (isinstance(config_obj, dict) and len(config_obj) > 0):
+                    guard_error = {
+                        "error": "invalid_optimize_arguments",
+                        "tool": "api.optimize",
+                        "message": "Optimize requires either a valid preset_id or a non-empty config object.",
+                    }
+                    conversation.append({"role": "tool", "name": "api.optimize", "content": json.dumps(guard_error)})
+                    last_tool_result = guard_error
+                    last_tool_name = "api.optimize"
+                    continue
+                if preset_id is not None and isinstance(state, dict):
+                    state_ctx = state.get("assetContext")
+                    if not isinstance(state_ctx, dict):
+                        state_ctx = {}
+                    state_ctx["lastPresetId"] = preset_id
+                    known = state_ctx.get("knownPresetIds", [])
+                    if not isinstance(known, list):
+                        known = []
+                    if preset_id not in known:
+                        known.append(preset_id)
+                    state_ctx["knownPresetIds"] = known[-25:]
+                    state["assetContext"] = state_ctx
+                    if session_id is not None:
+                        session_state[session_id] = state
             call_id = str(uuid.uuid4())
             conversation.append({"role": "assistant", "content": json.dumps({"tool": name, "arguments": arguments})})
             await ws.send_text(json.dumps({"type": "tool_start", "callId": call_id, "name": name, "arguments": arguments}))
@@ -542,6 +903,9 @@ async def handle_user_message(
                     used_fs_write = True
                 last_tool_result = result
                 last_tool_name = name
+                state = _update_asset_context(state, name, result)
+                if session_id is not None:
+                    session_state[session_id] = state
                 conversation.append({"role": "tool", "name": name, "content": json.dumps(result)})
                 if not gemini_client.is_configured(normalized_override):
                     summary = summarize_result(result)

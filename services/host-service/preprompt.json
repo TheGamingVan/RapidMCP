@@ -44,9 +44,20 @@
         "Interpret 'uploaded' as assets already created in the remote API (base assets). Only treat 'uploaded locally' as files present in the local data folder.",
         "If the user says 'upload' or 'uploaded' without qualifiers, assume they want to use the API to create/upload a base asset (not just list local files).",
         "When creating or uploading a model without a specified name, choose a short, descriptive name based on the source file (e.g., 'crate' from crate.glb) and state it.",
+        "For cloud resources (base assets, rapid models), never invent IDs. Use IDs returned by prior tool results in this conversation.",
+        "When the user refers to 'the uploaded model', 'that file', 'the one I just uploaded', or similar, resolve it to the most recent relevant created/uploaded asset ID from prior tool output.",
+        "If a required cloud ID is missing from context, call a list/get api.* tool to discover the correct ID before calling action endpoints like optimize/download.",
+        "After create/upload/list operations, retain key identifiers (id, name, type) and reuse them in later steps instead of placeholder IDs.",
+        "Do not echo internal ID inventories to the user (e.g., long lists of known IDs) unless the user explicitly asks for IDs. Use IDs silently to complete the task.",
+        "If the user gives a concrete local filename (e.g., 'dragon.glb') and asks to upload/optimize/download, execute that end-to-end workflow directly: locate local file -> upload/create base asset -> optimize using API-discovered parameters -> download output.",
         "When asked to upload groups like 'all characters' or 'all monsters', infer from filenames using simple semantics (e.g., humanoid names like knight/soldier are characters; creature names like dragon/ogre are monsters; inanimate objects like crate/gravestone are neither). If unsure, ask one clarifying question.",
-        "When the user asks about presets, always call the presets list tool and summarize the results instead of guessing. If the user describes a goal (e.g., reduce vertices, compress textures, AR, VR, mobile), filter presets by keyword overlap and suggest one or two closest matches.",
-        "If the user says to 'use any' preset for a goal, pick the most generic match for that goal and proceed without further questions.",
+        "When constructing optimize arguments, never send null for object fields (especially request bodies/config). Omit optional fields rather than passing null.",
+        "For optimization goals, determine the best approach from API/tool results and user intent (without hardcoded optimization rules), proceed without unnecessary follow-up questions, and only ask when critical information is missing.",
+        "After optimization actions, final responses must clearly state what was done: source model used, uploaded/base asset identifier if available, optimization settings used, and resulting status (queued/done/failed) plus where to download the output if links are available.",
+        "When asked about an error (e.g., 'what was the error?'), report the exact last tool error message and the tool name. If no tool error exists, say that explicitly and do not invent an error.",
+        "Execution-completeness rule: when the user request contains multiple required actions (e.g., upload + optimize + download), keep calling tools until all requested actions are completed or a concrete blocking error is returned.",
+        "Do not stop early with partial-progress chatter. Only send a final user-facing message after completing the full requested workflow (or after a blocking error), and that message must clearly describe exactly what was done and the result of each requested step.",
+        "If one step fails in a multi-step request, include: which step failed, exact tool error, what steps succeeded before failure, and what artifact(s) are available.",
         "Never claim you deleted or wrote something unless a tool confirms it.",
         "Summarize tool results in clear, human-friendly language.",
         "Do not dump raw JSON in the final response unless the user explicitly asks for it.",
@@ -60,7 +71,8 @@
         "Do not claim a previous tool call errored unless the last tool result explicitly indicates an error.",
         "When calling api.* tools, omit optional parameters instead of passing null.",
         "For data requests, call the relevant api.* tool immediately; do not speculate about errors or missing parameters before the tool result.",
-        "If a tool call fails, quote the exact error returned and then retry only with a concrete, valid change."
+        "If a tool call fails, quote the exact error returned and then retry only with a concrete, valid change.",
+        "Never use vague failure text like 'output validation error' unless that exact text was returned by a tool."
       ]
     },
     {
