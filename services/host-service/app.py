@@ -15,6 +15,7 @@ from gemini_client import GeminiClient
 from mcp_http_client import McpHttpClient
 from stdio_mcp_client import StdioMcpClient
 import httpx
+from urllib.parse import unquote
 
 LOG_DIR = Path(__file__).resolve().parents[2] / "log"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -250,6 +251,17 @@ def _extract_config_obj(arguments: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     return None
 
 
+def _is_likely_complete_optimize_config(config: Any) -> bool:
+    # RapidPipeline rejects partial preset fragments (for example, only `limits`).
+    # Require at least the known mandatory processor section.
+    if not isinstance(config, dict) or not config:
+        return False
+    asset_simplification = config.get("assetSimplification")
+    if not isinstance(asset_simplification, dict) or not asset_simplification:
+        return False
+    return True
+
+
 def _normalize_optimize_arguments(arguments: Dict[str, Any]) -> Dict[str, Any]:
     # Ensure optimize payload always conforms to the OpenAPI tool shape.
     normalized = dict(arguments)
@@ -273,6 +285,8 @@ def _normalize_optimize_arguments(arguments: Dict[str, Any]) -> Dict[str, Any]:
     preset_id = _extract_preset_id(normalized)
     config = normalized.get("config")
     config_obj = config if isinstance(config, dict) and len(config) > 0 else None
+    if config_obj is not None and not _is_likely_complete_optimize_config(config_obj):
+        config_obj = None
 
     if preset_id is not None and preset_id > 0:
         normalized["preset_id"] = int(preset_id)
@@ -336,6 +350,90 @@ def _pick_known_preset_for_goal(asset_ctx: Dict[str, Any], user_text: str) -> Op
         return None
     scored.sort(key=lambda x: x[0], reverse=True)
     return scored[0][1]
+
+
+def _pick_any_known_preset(asset_ctx: Dict[str, Any]) -> Optional[int]:
+    if not isinstance(asset_ctx, dict):
+        return None
+    last_preset = asset_ctx.get("lastPresetId")
+    if isinstance(last_preset, int) and last_preset > 0:
+        return last_preset
+    preset_ids = asset_ctx.get("knownPresetIds", [])
+    if isinstance(preset_ids, list):
+        for candidate in reversed(preset_ids):
+            if isinstance(candidate, int) and candidate > 0:
+                return candidate
+    return None
+
+
+def _extract_face_ratio_from_text(text: str) -> Optional[float]:
+    if not isinstance(text, str) or not text.strip():
+        return None
+    t = text.lower()
+    if not any(token in t for token in ("face", "faces", "triangle", "triangles", "polygon", "polygons", "poly")):
+        return None
+    frac = re.search(r"\b(\d+)\s*/\s*(\d+)\b", t)
+    if frac:
+        num = int(frac.group(1))
+        den = int(frac.group(2))
+        if den > 0 and num > 0:
+            ratio = float(num) / float(den)
+            if 0 < ratio <= 1:
+                return ratio
+    pct = re.search(r"\b(\d{1,3})(?:\.\d+)?\s*%\b", t)
+    if pct:
+        p = int(pct.group(1))
+        if 0 < p <= 100:
+            return float(p) / 100.0
+    if "half" in t:
+        return 0.5
+    if "third" in t:
+        return 1.0 / 3.0
+    if "quarter" in t:
+        return 0.25
+    return None
+
+
+def _extract_preset_config_obj(result: Any) -> Optional[Dict[str, Any]]:
+    if not isinstance(result, dict):
+        return None
+    cfg = result.get("config")
+    if isinstance(cfg, dict):
+        return cfg
+    if isinstance(cfg, str):
+        try:
+            parsed = json.loads(cfg)
+            if isinstance(parsed, dict):
+                return parsed
+        except Exception:
+            return None
+    body = result.get("body")
+    if isinstance(body, str):
+        try:
+            parsed = json.loads(body)
+            if isinstance(parsed, dict):
+                return _extract_preset_config_obj(parsed)
+        except Exception:
+            return None
+    if isinstance(body, dict):
+        return _extract_preset_config_obj(body)
+    return None
+
+
+def _apply_face_ratio_to_config(config: Dict[str, Any], ratio: float) -> Dict[str, Any]:
+    updated = dict(config)
+    limits = updated.get("limits")
+    if not isinstance(limits, dict):
+        limits = {}
+    faces = limits.get("faces")
+    if not isinstance(faces, dict):
+        faces = {}
+    percent = max(1, min(100, int(round(ratio * 100))))
+    faces["percentage"] = percent
+    faces.pop("count", None)
+    limits["faces"] = faces
+    updated["limits"] = limits
+    return updated
 
 def read_api_config() -> Dict[str, str]:
     if not API_CONFIG_PATH.exists():
@@ -646,6 +744,97 @@ async def handle_user_message(
         dirs = compute_allowed_dirs()
         return dirs[0] if dirs else os.path.abspath(FILE_STORE_DIR)
 
+    def file_uri_to_path(uri: str) -> Optional[str]:
+        if not isinstance(uri, str):
+            return None
+        text = uri.strip().strip("'\"")
+        if not text.lower().startswith("file://"):
+            return None
+        raw = unquote(text[7:])
+        if re.match(r"^/[A-Za-z]:/", raw):
+            raw = raw[1:]
+        raw = raw.replace("/", os.sep)
+        try:
+            return os.path.abspath(raw)
+        except Exception:
+            return None
+
+    def resolve_local_path(value: str) -> str:
+        raw = str(value or "").strip().strip("'\"")
+        raw = raw.rstrip(" \t\r\n,;.!?)")
+        if not raw:
+            return raw
+
+        from_uri = file_uri_to_path(raw)
+        if isinstance(from_uri, str) and from_uri:
+            return from_uri
+
+        if os.path.isabs(raw):
+            return os.path.abspath(raw)
+
+        # If this is a plain filename, try selected file URIs first.
+        basename = os.path.basename(raw).lower()
+        uri_matches: List[str] = []
+        for uri in file_uris:
+            p = file_uri_to_path(uri)
+            if not p:
+                continue
+            if os.path.basename(p).lower() == basename:
+                uri_matches.append(p)
+        if len(uri_matches) == 1:
+            return uri_matches[0]
+
+        # Relative paths are interpreted from the default allowed directory.
+        default_candidate = os.path.abspath(os.path.join(default_fs_dir(), raw))
+        if os.path.exists(default_candidate):
+            return default_candidate
+
+        # Try direct join in allowed dirs.
+        direct_matches: List[str] = []
+        for d in compute_allowed_dirs():
+            candidate = os.path.abspath(os.path.join(d, raw))
+            if os.path.exists(candidate):
+                direct_matches.append(candidate)
+        if len(direct_matches) == 1:
+            return direct_matches[0]
+
+        # Extension fallback for model files.
+        if "." not in os.path.basename(raw):
+            model_exts = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".usdz", ".usd", ".zip"]
+            for d in compute_allowed_dirs():
+                for ext in model_exts:
+                    candidate = os.path.abspath(os.path.join(d, raw + ext))
+                    if os.path.exists(candidate):
+                        return candidate
+
+        # Case-insensitive filename match in allowed dirs.
+        ci_matches: List[str] = []
+        for d in compute_allowed_dirs():
+            try:
+                for entry in os.listdir(d):
+                    if entry.lower() == basename:
+                        ci_matches.append(os.path.abspath(os.path.join(d, entry)))
+            except Exception:
+                continue
+        if len(ci_matches) == 1:
+            return ci_matches[0]
+
+        return raw
+
+    def normalize_fs_arguments(name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        if not name.startswith("fs.") or not isinstance(arguments, dict):
+            return arguments
+        updated = dict(arguments)
+        for key in ("path", "filePath", "file_path", "uri"):
+            val = updated.get(key)
+            if isinstance(val, str) and val.strip():
+                updated[key] = resolve_local_path(val)
+        for key in ("paths", "filePaths", "file_paths", "uris"):
+            val = updated.get(key)
+            if isinstance(val, list):
+                updated[key] = [resolve_local_path(v) if isinstance(v, str) else v for v in val]
+        return updated
+
     def extract_entries(list_result: Any) -> List[Any]:
         if isinstance(list_result, list):
             return list_result
@@ -851,7 +1040,15 @@ async def handle_user_message(
                 return
             raw_arguments = decision.get("arguments", {})
             arguments = _strip_none_values(raw_arguments) if isinstance(raw_arguments, dict) else {}
+            arguments = normalize_fs_arguments(name, arguments)
             if name == "api.optimize":
+                target_face_ratio = _extract_face_ratio_from_text(content_text)
+                raw_config_obj = _extract_config_obj(arguments)
+                had_incomplete_config = (
+                    isinstance(raw_config_obj, dict)
+                    and len(raw_config_obj) > 0
+                    and not _is_likely_complete_optimize_config(raw_config_obj)
+                )
                 arguments = _normalize_optimize_arguments(arguments)
                 preset_id = _extract_preset_id(arguments)
                 config_obj = _extract_config_obj(arguments)
@@ -868,6 +1065,83 @@ async def handle_user_message(
                 # Re-normalize after any preset injection.
                 arguments = _normalize_optimize_arguments(arguments)
                 config_obj = _extract_config_obj(arguments)
+                if preset_id is None and not (isinstance(config_obj, dict) and len(config_obj) > 0):
+                    # Auto-discover presets so optimization can proceed even if the model
+                    # did not explicitly call preset discovery tools first.
+                    for preset_tool in ("api.getFactoryPresets", "api.getCustomPresets"):
+                        try:
+                            preset_result = await call_tool(preset_tool, {})
+                            last_tool_result = preset_result
+                            last_tool_name = preset_tool
+                            state = _update_asset_context(state, preset_tool, preset_result)
+                            if session_id is not None:
+                                session_state[session_id] = state
+                            conversation.append({"role": "tool", "name": preset_tool, "content": json.dumps(preset_result)})
+                            asset_ctx = state.get("assetContext", {}) if isinstance(state, dict) else {}
+                            discovered = _pick_known_preset_for_goal(asset_ctx, content_text)
+                            if discovered is None:
+                                discovered = _pick_any_known_preset(asset_ctx)
+                            if isinstance(discovered, int) and discovered > 0:
+                                arguments = _inject_preset_id(arguments, discovered)
+                                preset_id = discovered
+                                break
+                        except Exception as preset_discovery_error:
+                            conversation.append(
+                                {
+                                    "role": "tool",
+                                    "name": preset_tool,
+                                    "content": json.dumps({"error": str(preset_discovery_error)}),
+                                }
+                            )
+                            continue
+                    arguments = _normalize_optimize_arguments(arguments)
+                    config_obj = _extract_config_obj(arguments)
+                # If user requested relative face reduction, prefer a concrete config
+                # derived from a real preset so optimize can honor the ratio precisely.
+                if isinstance(target_face_ratio, float) and 0 < target_face_ratio <= 1:
+                    ratio_config: Optional[Dict[str, Any]] = None
+                    if isinstance(config_obj, dict) and _is_likely_complete_optimize_config(config_obj):
+                        ratio_config = _apply_face_ratio_to_config(config_obj, target_face_ratio)
+                    elif isinstance(preset_id, int) and preset_id > 0:
+                        try:
+                            preset_details = await call_tool("api.getPreset", {"id": preset_id})
+                            last_tool_result = preset_details
+                            last_tool_name = "api.getPreset"
+                            state = _update_asset_context(state, "api.getPreset", preset_details)
+                            if session_id is not None:
+                                session_state[session_id] = state
+                            conversation.append({"role": "tool", "name": "api.getPreset", "content": json.dumps(preset_details)})
+                            preset_cfg = _extract_preset_config_obj(preset_details)
+                            if isinstance(preset_cfg, dict) and _is_likely_complete_optimize_config(preset_cfg):
+                                ratio_config = _apply_face_ratio_to_config(preset_cfg, target_face_ratio)
+                        except Exception as preset_get_error:
+                            conversation.append(
+                                {
+                                    "role": "tool",
+                                    "name": "api.getPreset",
+                                    "content": json.dumps({"error": str(preset_get_error)}),
+                                }
+                            )
+                    if isinstance(ratio_config, dict):
+                        arguments["config"] = ratio_config
+                        arguments.pop("preset_id", None)
+                        arguments = _normalize_optimize_arguments(arguments)
+                        preset_id = _extract_preset_id(arguments)
+                        config_obj = _extract_config_obj(arguments)
+                if preset_id is None and had_incomplete_config and not (isinstance(config_obj, dict) and len(config_obj) > 0):
+                    guard_error = {
+                        "error": "invalid_optimize_arguments",
+                        "tool": "api.optimize",
+                        "message": (
+                            "Incomplete optimize config. Do not send partial preset fragments "
+                            "(e.g. limits-only). Call a preset api.* tool and retry optimize "
+                            "with preset_id, or provide a full preset-compatible config."
+                        ),
+                    }
+                    conversation.append({"role": "tool", "name": "api.optimize", "content": json.dumps(guard_error)})
+                    last_tool_result = guard_error
+                    last_tool_name = "api.optimize"
+                    continue
                 # Guard: never call optimize without either a valid preset_id or a config object.
                 if preset_id is None and not (isinstance(config_obj, dict) and len(config_obj) > 0):
                     guard_error = {
