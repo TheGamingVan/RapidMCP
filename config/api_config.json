@@ -1,0 +1,6 @@
+{
+  "apiBaseUrl": "https://api.rapidpipeline.com",
+  "bearerToken": "41981|qG64e8z1aCKp8z4s2CNA8tyPT0P9BtQmiFdMLhZWc68c6750",
+  "geminiApiKey": "AIzaSyB7i5MiG1Ip_zRvfq2unNgT8Hz_VuMIew8",
+  "geminiModel": "gemini-2.5-pro"
+}

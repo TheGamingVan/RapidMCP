@@ -20,7 +20,7 @@ from urllib.parse import unquote
 LOG_DIR = Path(__file__).resolve().parents[2] / "log"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 LOG_PATH = LOG_DIR / "host-service.log"
-API_CONFIG_PATH = Path(__file__).resolve().parents[2] / "data" / "api_config.json"
+API_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "api_config.json"
 
 logger = logging.getLogger("host-service")
 if not logger.handlers:

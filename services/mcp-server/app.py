@@ -17,9 +17,10 @@ if not logging.getLogger().handlers:
 
 
 def _config_path() -> Path:
-    default = Path(__file__).resolve().parents[2] / "data" / "api_config.json"
     override = os.getenv("API_CONFIG_PATH")
-    return Path(override) if override else default
+    if override:
+        return Path(override)
+    return Path(__file__).resolve().parents[2] / "config" / "api_config.json"
 
 
 def load_runtime_config() -> Dict[str, str]:
@@ -73,7 +74,7 @@ def resolve_api_base(data: Dict[str, Any]) -> Optional[str]:
 
 class DynamicConfigClient:
     def __init__(self, config_loader, default_base_url: Optional[str]) -> None:
-        self._client = httpx.AsyncClient()
+        self._client = httpx.AsyncClient(timeout=20.0)
         self._config_loader = config_loader
         self._default_base_url = default_base_url or "http://localhost"
 
@@ -100,7 +101,13 @@ class DynamicConfigClient:
         return headers
 
     async def send(self, request: httpx.Request) -> httpx.Response:
-        return await self._client.send(request)
+        try:
+            return await self._client.send(request)
+        except httpx.ConnectError as exc:
+            raise ValueError(
+                f"Connection failed for {request.method} {request.url}. "
+                "Check API_BASE_URL/API_CONFIG_PATH and that the API host is running."
+            ) from exc
 
     async def aclose(self) -> None:
         await self._client.aclose()

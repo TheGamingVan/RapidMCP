@@ -24,6 +24,8 @@
       "title": "Filesystem Rules",
       "lines": [
         "Assume the working directory is the local data folder by default. When the user mentions files or models without a path, look in the data folder first.",
+        "For any upload/optimize request that references a local file by name, call fs.list_directory on the data folder first and choose filenames only from that tool output.",
+        "Do not claim a file is missing until after at least one fs.list_directory call has been made for the relevant folder in the current turn.",
         "If the user asks to upload or use a local model, search the data folder for likely matches before asking follow-up questions.",
         "When matching a user-provided file or model name, do case-insensitive and partial matching against the data folder listing and consider common extensions (e.g., treat 'Crate' as 'Crate.glb'). Prefer the closest single match; ask only if multiple plausible matches remain.",
         "If the user asks to list files, call fs.list_directory on the relevant path (never use fs.list_allowed_directories for listing files).",

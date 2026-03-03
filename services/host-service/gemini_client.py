@@ -12,7 +12,7 @@ class GeminiClient:
         self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
         self.context_window = int(os.getenv("AGENT_CONTEXT_WINDOW_SIZE", "6000"))
         self.preprompt_path = Path(os.getenv("PREPROMPT_PATH", Path(__file__).with_name("preprompt.json")))
-        self.config_path = Path(os.getenv("API_CONFIG_PATH", Path(__file__).resolve().parents[2] / "data" / "api_config.json"))
+        self.config_path = Path(os.getenv("API_CONFIG_PATH", Path(__file__).resolve().parents[2] / "config" / "api_config.json"))
 
     def _load_runtime_config(self) -> Dict[str, str]:
         if not self.config_path.exists():
