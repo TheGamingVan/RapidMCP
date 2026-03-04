@@ -703,6 +703,16 @@ async def handle_user_message(
     await ws.send_text(json.dumps({"type": "status", **status_payload}))
     tool_names = {t.get("name", "") for t in tools}
     content_text = content or ""
+    lowered_content = content_text.lower()
+    has_batch_quantifier = bool(re.search(r"\b(all|every|each)\b", lowered_content))
+    has_upload_intent = "upload" in lowered_content
+    has_optimize_intent = any(token in lowered_content for token in ("optimize", "optimise", "optimization", "optimisation"))
+    batch_guard_enabled = has_batch_quantifier and (has_upload_intent or has_optimize_intent)
+    request_mentions_preset = bool(re.search(r"\bpreset\b", lowered_content))
+    explicit_create_preset_intent = bool(
+        re.search(r"\b(create|make|build|new)\b.*\bpreset\b", lowered_content)
+        or re.search(r"\bpreset\b.*\b(create|make|build|new)\b", lowered_content)
+    )
     api_tools = [t for t in tools if t.get("source") == "api"]
     memory = session_conversations.get(session_id, []) if session_id else []
     state = session_state.get(session_id, {}) if session_id else {}
@@ -974,6 +984,105 @@ async def handle_user_message(
     used_fs_write = False
     last_tool_result: Any = None
     last_tool_name: Optional[str] = None
+    optimized_count = 0
+    uploaded_count = 0
+    model_file_count_seen = 0
+    batch_guard_nudges = 0
+    request_locked_preset_id: Optional[int] = None
+    optimized_base_ids: set[int] = set()
+    uploaded_completed_stems: set[str] = set()
+    pending_upload_stem: Optional[str] = None
+    discovered_model_names: set[str] = set()
+    uploaded_model_names: set[str] = set()
+
+    furniture_keywords = {
+        "bed",
+        "chair",
+        "table",
+        "cupboard",
+        "sofa",
+        "desk",
+        "shelf",
+        "cabinet",
+        "wardrobe",
+        "dresser",
+        "stool",
+        "bench",
+    }
+
+    def is_model_filename(name: str) -> bool:
+        if not isinstance(name, str):
+            return False
+        lowered = name.strip().lower()
+        return lowered.endswith((".glb", ".gltf", ".fbx", ".obj", ".stl", ".usdz", ".usd", ".zip"))
+
+    def count_model_files_from_entries(entries: List[Any]) -> int:
+        count = 0
+        for entry in entries:
+            if isinstance(entry, str):
+                if is_model_filename(entry):
+                    count += 1
+                continue
+            if isinstance(entry, dict):
+                name_val = entry.get("name") or entry.get("path") or entry.get("uri") or ""
+                if isinstance(name_val, str) and is_model_filename(name_val):
+                    count += 1
+        return count
+
+    def names_from_entries(entries: List[Any]) -> set[str]:
+        out: set[str] = set()
+        for entry in entries:
+            name_val: Optional[str] = None
+            if isinstance(entry, str):
+                name_val = entry
+            elif isinstance(entry, dict):
+                raw = entry.get("name") or entry.get("path") or entry.get("uri")
+                if isinstance(raw, str):
+                    name_val = raw
+            if not isinstance(name_val, str):
+                continue
+            base = os.path.basename(name_val.strip()).lower()
+            stem, ext = os.path.splitext(base)
+            if stem and ext in (".glb", ".gltf", ".fbx", ".obj", ".stl", ".usdz", ".usd", ".zip"):
+                out.add(stem)
+        return out
+
+    def extract_model_stem_from_arguments(name: str, arguments: Dict[str, Any]) -> Optional[str]:
+        if not isinstance(arguments, dict):
+            return None
+        if name == "http.put":
+            file_path = arguments.get("filePath")
+            if isinstance(file_path, str) and file_path.strip():
+                base = os.path.basename(file_path.strip()).lower()
+                stem, ext = os.path.splitext(base)
+                if stem and ext in (".glb", ".gltf", ".fbx", ".obj", ".stl", ".usdz", ".usd", ".zip"):
+                    return stem
+        filename = arguments.get("filename")
+        if isinstance(filename, str) and filename.strip():
+            base = os.path.basename(filename.strip()).lower()
+            stem, ext = os.path.splitext(base)
+            if stem and ext in (".glb", ".gltf", ".fbx", ".obj", ".stl", ".usdz", ".usd", ".zip"):
+                return stem
+        return None
+
+    def infer_expected_batch_targets() -> set[str]:
+        if not discovered_model_names:
+            return set()
+        if "furniture" in lowered_content:
+            return {name for name in discovered_model_names if any(token in name for token in furniture_keywords)}
+        if re.search(r"\ball\b.*\bmodels?\b", lowered_content):
+            return set(discovered_model_names)
+        return set()
+
+    def extract_base_asset_id(value: Any) -> Optional[int]:
+        if isinstance(value, dict):
+            direct = _safe_int(value.get("rawmodel_id"))
+            if isinstance(direct, int) and direct > 0:
+                return direct
+            alt = _safe_int(value.get("id"))
+            if isinstance(alt, int) and alt > 0:
+                return alt
+        return None
     while True:
         asset_ctx = state.get("assetContext", {}) if isinstance(state, dict) else {}
         if not isinstance(asset_ctx, dict):
@@ -1037,9 +1146,38 @@ async def handle_user_message(
                 if session_id is not None:
                     session_conversations[session_id] = conversation + [{"role": "assistant", "content": message}]
                 return
+            lower_tool_name = name.lower()
+            if (
+                request_mentions_preset
+                and not explicit_create_preset_intent
+                and lower_tool_name.startswith("api.")
+                and "preset" in lower_tool_name
+                and "create" in lower_tool_name
+            ):
+                guard_error = {
+                    "error": "preset_creation_not_requested",
+                    "tool": name,
+                    "message": (
+                        "Do not create a new preset for this request. "
+                        "Use existing preset discovery/selection tools and continue."
+                    ),
+                }
+                conversation.append({"role": "tool", "name": name, "content": json.dumps(guard_error)})
+                last_tool_result = guard_error
+                last_tool_name = name
+                continue
             raw_arguments = decision.get("arguments", {})
             arguments = _strip_none_values(raw_arguments) if isinstance(raw_arguments, dict) else {}
             arguments = normalize_fs_arguments(name, arguments)
+            if batch_guard_enabled and name == "http.put":
+                put_stem = extract_model_stem_from_arguments(name, arguments)
+                if isinstance(put_stem, str) and put_stem in uploaded_completed_stems:
+                    skipped = {"skipped": True, "reason": "already_uploaded_in_request", "model": put_stem}
+                    last_tool_result = skipped
+                    last_tool_name = name
+                    conversation.append({"role": "tool", "name": name, "content": json.dumps(skipped)})
+                    continue
+                pending_upload_stem = put_stem or pending_upload_stem
             if name == "api.optimize":
                 target_face_ratio = _extract_face_ratio_from_text(content_text)
                 raw_config_obj = _extract_config_obj(arguments)
@@ -1061,6 +1199,11 @@ async def handle_user_message(
                     if isinstance(inferred_preset, int) and inferred_preset > 0:
                         arguments = _inject_preset_id(arguments, inferred_preset)
                         preset_id = inferred_preset
+                # Request-level consistency: once a preset is selected for this request,
+                # keep using it for all remaining optimize calls in the same request.
+                if isinstance(request_locked_preset_id, int) and request_locked_preset_id > 0:
+                    arguments = _inject_preset_id(arguments, request_locked_preset_id)
+                    preset_id = request_locked_preset_id
                 # Re-normalize after any preset injection.
                 arguments = _normalize_optimize_arguments(arguments)
                 config_obj = _extract_config_obj(arguments)
@@ -1166,12 +1309,56 @@ async def handle_user_message(
                     state["assetContext"] = state_ctx
                     if session_id is not None:
                         session_state[session_id] = state
+                if batch_guard_enabled:
+                    optimize_target_id = _safe_int(arguments.get("id"))
+                    if isinstance(optimize_target_id, int) and optimize_target_id in optimized_base_ids:
+                        skipped = {
+                            "skipped": True,
+                            "reason": "already_optimized_in_request",
+                            "id": optimize_target_id,
+                        }
+                        last_tool_result = skipped
+                        last_tool_name = name
+                        conversation.append({"role": "tool", "name": name, "content": json.dumps(skipped)})
+                        continue
             call_id = str(uuid.uuid4())
             conversation.append({"role": "assistant", "content": json.dumps({"tool": name, "arguments": arguments})})
             await ws.send_text(json.dumps({"type": "tool_start", "callId": call_id, "name": name, "arguments": arguments}))
             try:
                 result = await call_tool(name, arguments)
                 await ws.send_text(json.dumps({"type": "tool_end", "callId": call_id, "result": result}))
+                uploaded_stem = extract_model_stem_from_arguments(name, arguments)
+                if uploaded_stem:
+                    uploaded_model_names.add(uploaded_stem)
+                if name == "fs.list_directory":
+                    entries = extract_entries(result)
+                    if isinstance(entries, list):
+                        model_file_count_seen = max(model_file_count_seen, count_model_files_from_entries(entries))
+                        discovered_model_names.update(names_from_entries(entries))
+                if name == "api.createBaseAssetCompleteUpload":
+                    completed_stem = pending_upload_stem or extract_model_stem_from_arguments(name, arguments)
+                    if completed_stem and completed_stem not in uploaded_completed_stems:
+                        uploaded_completed_stems.add(completed_stem)
+                        uploaded_count += 1
+                    elif not completed_stem:
+                        uploaded_count += 1
+                    pending_upload_stem = None
+                if name == "api.optimize":
+                    optimize_target_id = _safe_int(arguments.get("id"))
+                    if isinstance(optimize_target_id, int):
+                        if optimize_target_id not in optimized_base_ids:
+                            optimized_base_ids.add(optimize_target_id)
+                            optimized_count += 1
+                    else:
+                        optimized_count += 1
+                    if (
+                        isinstance(preset_id, int)
+                        and preset_id > 0
+                        and (batch_guard_enabled or request_mentions_preset)
+                        and request_locked_preset_id is None
+                        and not (isinstance(result, dict) and "error" in result)
+                    ):
+                        request_locked_preset_id = preset_id
                 if name.startswith("fs.") and re.search(r"write|save", name, re.IGNORECASE):
                     used_fs_write = True
                 last_tool_result = result
@@ -1194,6 +1381,29 @@ async def handle_user_message(
                 conversation.append({"role": "tool", "name": name, "content": str(e)})
                 content = ""
                 continue
+        if batch_guard_enabled:
+            has_multiple_models = model_file_count_seen > 1
+            expected_targets = infer_expected_batch_targets()
+            has_only_partial_progress = (
+                (has_optimize_intent and optimized_count <= 1)
+                or (has_upload_intent and uploaded_count <= 1)
+            )
+            has_missing_named_targets = bool(expected_targets) and len(uploaded_model_names.intersection(expected_targets)) < len(expected_targets)
+            has_optimize_lag = has_optimize_intent and optimized_count < max(1, len(uploaded_model_names))
+            should_continue = (has_multiple_models and has_only_partial_progress) or has_missing_named_targets or has_optimize_lag
+            if should_continue and batch_guard_nudges < 6:
+                batch_guard_nudges += 1
+                conversation.append(
+                    {
+                        "role": "user",
+                        "content": (
+                            "Continue executing the same request for all remaining matching items. "
+                            "Do not finalize yet; keep calling tools until batch processing is complete."
+                        ),
+                    }
+                )
+                continue
+
         message = decision.get("message", "")
         if not isinstance(message, str) or not message.strip():
             logger.warning("Model returned empty message: %s", decision)

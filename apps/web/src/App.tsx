@@ -258,7 +258,7 @@ export default function App() {
       />
       <div className="flex-1 px-6 py-6 min-h-0 overflow-hidden">
         <div className="max-w-6xl mx-auto h-full overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6 h-full items-stretch min-h-0">
+          <div className="grid grid-cols-1 xl:grid-cols-[260px_1fr_360px] gap-6 h-full items-stretch min-h-0">
             <Sidebar tools={tools} />
             <div className="grid grid-rows-[auto_minmax(0,2fr)_minmax(0,1fr)] gap-6 h-full min-h-0">
               <ConfigPanel
@@ -266,18 +266,16 @@ export default function App() {
                 onChange={handleConfigChange}
                 models={[...new Set([...COMMON_GEMINI_MODELS, ...geminiModels, ...(apiConfig.geminiModel ? [apiConfig.geminiModel] : [])])]}
               />
-              <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 min-h-0 min-w-0">
-                <ChatPanel messages={messages} draftAssistant={draftAssistant} onSend={handleSend} isProcessing={isProcessing} />
-                <ToolActivity events={toolEvents} />
-              </div>
-              <FilesPanel
-                files={files}
-                selectedFiles={selectedFiles}
-                onToggle={toggleFile}
-                onUpload={handleUpload}
-                onDelete={handleDelete}
-              />
+              <ChatPanel messages={messages} draftAssistant={draftAssistant} onSend={handleSend} isProcessing={isProcessing} />
+              <ToolActivity events={toolEvents} />
             </div>
+            <FilesPanel
+              files={files}
+              selectedFiles={selectedFiles}
+              onToggle={toggleFile}
+              onUpload={handleUpload}
+              onDelete={handleDelete}
+            />
           </div>
         </div>
       </div>

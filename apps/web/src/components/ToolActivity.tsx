@@ -1,10 +1,28 @@
+import { useEffect, useRef, useState } from "react"
 import { ToolEvent } from "@/lib/types"
 
 export default function ToolActivity({ events }: { events: ToolEvent[] }) {
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  const [isHovered, setIsHovered] = useState(false)
+
+  useEffect(() => {
+    if (isHovered) return
+    const el = scrollRef.current
+    if (!el) return
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight
+    })
+  }, [events, isHovered])
+
   return (
     <div className="panel p-4 h-full min-h-0 flex flex-col min-w-0">
       <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Tool Activity</div>
-      <div className="mt-4 space-y-3 overflow-y-auto overflow-x-auto flex-1 min-h-0 min-w-0">
+      <div
+        ref={scrollRef}
+        className="mt-4 space-y-3 overflow-y-auto overflow-x-auto flex-1 min-h-0 min-w-0"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
         {events.map((e) => (
           <div key={e.callId} className="rounded-xl border border-slate-200 bg-white px-3 py-2">
             <div className="flex items-center justify-between">
