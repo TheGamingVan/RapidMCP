@@ -974,8 +974,7 @@ async def handle_user_message(
     used_fs_write = False
     last_tool_result: Any = None
     last_tool_name: Optional[str] = None
-    max_iters = 12
-    for i in range(max_iters):
+    while True:
         asset_ctx = state.get("assetContext", {}) if isinstance(state, dict) else {}
         if not isinstance(asset_ctx, dict):
             asset_ctx = {}
@@ -1025,7 +1024,7 @@ async def handle_user_message(
                 "I couldn't continue because the model returned an invalid decision format "
                 f"(type={repr(decision_type)}, keys={decision_keys}). Please try again."
             )
-            await emit_assistant_message(ws, message)
+            message = await emit_assistant_message(ws, message)
             if session_id is not None:
                 session_conversations[session_id] = conversation + [{"role": "assistant", "content": message}]
             return
@@ -1034,7 +1033,7 @@ async def handle_user_message(
             if not isinstance(name, str) or not name:
                 logger.warning("Model returned tool call without name: %s", decision)
                 message = "Model returned an invalid tool call. Please try again."
-                await emit_assistant_message(ws, message)
+                message = await emit_assistant_message(ws, message)
                 if session_id is not None:
                     session_conversations[session_id] = conversation + [{"role": "assistant", "content": message}]
                 return
@@ -1184,7 +1183,7 @@ async def handle_user_message(
                 if not gemini_client.is_configured(normalized_override):
                     summary = summarize_result(result)
                     message = f"Done. {summary}"
-                    await emit_assistant_message(ws, message)
+                    message = await emit_assistant_message(ws, message)
                     if session_id is not None:
                         session_conversations[session_id] = conversation + [{"role": "assistant", "content": message}]
                     return
@@ -1199,28 +1198,65 @@ async def handle_user_message(
         if not isinstance(message, str) or not message.strip():
             logger.warning("Model returned empty message: %s", decision)
             message = "Model returned an empty response. Please try again."
-        await emit_assistant_message(ws, message)
+        message = await emit_assistant_message(ws, message)
         if session_id is not None:
             session_conversations[session_id] = conversation + [{"role": "assistant", "content": message}]
         return
 
-    # Fallback: if we exhaust iterations, return a safe message.
-    await emit_assistant_message(
-        ws,
-        "I couldn't finish the task within the allowed steps. Please try again.",
-    )
-    if session_id is not None:
-        session_conversations[session_id] = conversation + [
-            {"role": "assistant", "content": "I couldn't finish the task within the allowed steps. Please try again."},
-        ]
+def sanitize_assistant_message(message: str) -> str:
+    if not isinstance(message, str) or not message:
+        return ""
 
-async def emit_assistant_message(ws: WebSocket, message: str) -> None:
+    # Remove markdown links and raw URLs that point to image/QC render resources.
+    md_image_link_re = re.compile(
+        r"\[([^\]]+)\]\((https?://[^\s)]+)\)",
+        re.IGNORECASE,
+    )
+    raw_url_re = re.compile(r"https?://\S+", re.IGNORECASE)
+    image_hint_re = re.compile(
+        r"(qcrenders|/qc(?:_|-)renders/|\.(png|jpg|jpeg|webp|gif)(\?|$))",
+        re.IGNORECASE,
+    )
+
+    removed = False
+
+    def replace_md_link(match: re.Match[str]) -> str:
+        nonlocal removed
+        label = match.group(1) or "image"
+        url = match.group(2) or ""
+        if image_hint_re.search(url):
+            removed = True
+            return f"{label} (image URL omitted)"
+        return match.group(0)
+
+    text = md_image_link_re.sub(replace_md_link, message)
+
+    def replace_raw_url(match: re.Match[str]) -> str:
+        nonlocal removed
+        url = match.group(0) or ""
+        if image_hint_re.search(url):
+            removed = True
+            return "[image URL omitted]"
+        return url
+
+    text = raw_url_re.sub(replace_raw_url, text)
+
+    # If the message was mostly URL dumps, provide a concise fallback.
+    if removed:
+        stripped = re.sub(r"[ \t]+", " ", text).strip()
+        if not stripped or stripped in {"[image URL omitted]", "- [image URL omitted]"}:
+            return "Optimization was queued. Image URLs are omitted."
+    return text
+
+async def emit_assistant_message(ws: WebSocket, message: str) -> str:
+    message = sanitize_assistant_message(message)
     chunk_size = 40
     for i in range(0, len(message), chunk_size):
         delta = message[i:i+chunk_size]
         await ws.send_text(json.dumps({"type": "assistant_delta", "content": delta}))
         await asyncio.sleep(0.01)
     await ws.send_text(json.dumps({"type": "assistant_message", "content": message}))
+    return message
 
 async def call_tool(name: str, arguments: Dict[str, Any]) -> Any:
     if name.startswith("fs."):

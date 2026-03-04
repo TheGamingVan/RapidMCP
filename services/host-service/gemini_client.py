@@ -63,7 +63,8 @@ class GeminiClient:
         }
         headers = {"Content-Type": "application/json"}
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
-        for attempt in range(3):
+        attempt = 0
+        while True:
             try:
                 async with httpx.AsyncClient(timeout=25) as client:
                     resp = await client.post(url, headers=headers, json=payload)
@@ -72,8 +73,8 @@ class GeminiClient:
                 text = self.extract_text(data)
                 return self.parse_decision(text)
             except Exception:
+                attempt += 1
                 await asyncio.sleep(0.5 * (attempt + 1))
-        return {"type": "final", "message": "Gemini request failed"}
 
     def build_system_prompt(self, tools: List[Dict[str, Any]], file_uris: List[str], internal_hint: str = "") -> str:
         tools_json = json.dumps([{"name": t["name"], "description": t.get("description", ""), "inputSchema": t.get("inputSchema", {})} for t in tools])
