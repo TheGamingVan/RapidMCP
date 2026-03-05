@@ -7,7 +7,7 @@ RapidMCP is a local, multi-service app that combines:
 - an MCP server generated from an OpenAPI spec,
 - and optional filesystem MCP tools (via `npx @modelcontextprotocol/server-filesystem`).
 
-It is designed for tool-driven workflows against the RapidPipeline API (or another compatible API), with Gemini used for planning and response generation.
+It is designed for tool-driven workflows against the RapidPipeline API, with Gemini used for planning and response generation.
 
 ## Architecture
 
